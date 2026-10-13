@@ -1,0 +1,5 @@
+#!/bin/sh
+# 运行游戏：需要时先编译，然后在 bin 目录下启动 (等同于 make game)
+cd "$(dirname "$0")" || exit 1
+make -s all || exit 1
+cd bin && exec ./jy "$@"

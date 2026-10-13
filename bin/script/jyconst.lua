@@ -103,7 +103,9 @@ function SetGlobalConst()
    CC.ThingPicFile={CONFIG.DataPath .. "thing.idx",CONFIG.DataPath .. "thing.grp"};
 
 
-   CC.MIDIFile=CONFIG.SoundPath .. "game%02d.opus";
+   --音乐文件。game01-24.opus 由原版 GAME01-24.XMI 用 OPL3 模拟器和原版 SAMPLE.OPL 音色库录制；
+   --game25.opus 为移植版新增的片尾音乐。PlayMIDI 依次查找，播放第一个存在的文件
+   CC.MIDIFile={CONFIG.SoundPath .. "game%02d.opus"};
    CC.ATKFile=CONFIG.SoundPath .. "atk%02d.wav";
    CC.EFile=CONFIG.SoundPath .. "e%02d.wav";
 
@@ -417,7 +419,20 @@ function SetGlobalConst()
 
     CC.MoneyID=174;              --金钱物品id
 
-    CC.Shemale={ [78]=1,[91]=1}   --需要自宫的书的id
+    CC.Shemale={ [78]=1,[93]=1}   --需要自宫的书的id：辟邪剑谱、葵花宝典(同原版，移植版误为91左右互搏之术)
+
+    --物品说明中显示的数值需求，顺序即显示顺序。与CanUseThing中的判断一致
+    CC.ThingRequire={"需内力","需攻击力","需轻功","需用毒能力","需医疗能力","需解毒能力",
+                     "需拳掌功夫","需御剑能力","需耍刀技巧","需特殊兵器","需暗器技巧"};
+
+    --物品说明中显示的效果字段，与实际起作用的代码一致
+    CC.ThingEquipEffect={"加攻击力","加防御力","加轻功"};          --装备：战斗中计算攻击、防御和移动
+    CC.ThingTrainEffect={"加生命最大值","加内力最大值","加攻击力","加轻功","加防御力","加医疗能力",
+                         "加用毒能力","加解毒能力","加抗毒能力","加拳掌功夫","加御剑能力","加耍刀技巧",
+                         "加特殊兵器","加暗器技巧","加武学常识","加品德","加攻击带毒"};   --War_PersonTrainBook
+    CC.ThingDrugEffect={"加生命最大值","加体力","加内力","加内力最大值","加攻击力","加防御力","加轻功",
+                        "加医疗能力","加用毒能力","加解毒能力","加抗毒能力","加拳掌功夫","加御剑能力",
+                        "加耍刀技巧","加特殊兵器","加暗器技巧","加武学常识","加攻击带毒"};   --UseThingEffect
 
    CC.Effect={[0]=9,14,17,9,13,                    --eft.idx/grp贴图各个武功效果贴图个数
                  17,17,17,18,19,
@@ -440,6 +455,7 @@ function SetGlobalConst()
                    {119,68,100},}
 
     CC.NewPersonName=LANG.NewPersonName;      --新游戏的数据，见语言文件
+    CC.IdleRecoverTime=11000;                  --站着不动恢复1点体力的毫秒数（原版200个18.2Hz时钟节拍）
     CC.NewGameSceneID=70;                      --场景ID
     CC.NewGameSceneX=19;                       --场景坐标
     CC.NewGameSceneY=20;
@@ -452,7 +468,7 @@ function SetGlobalConst()
    CC.PersonAttribMax["修炼点数"]=60000;
    CC.PersonAttribMax["生命最大值"]=999;
    CC.PersonAttribMax["受伤程度"]=100;
-   CC.PersonAttribMax["中毒程度"]=100;
+   CC.PersonAttribMax["中毒程度"]=99;     --同原版最高99
    CC.PersonAttribMax["内力最大值"]=999;
    CC.PersonAttribMax["体力"]=100;
    CC.PersonAttribMax["攻击力"]=100;
@@ -561,6 +577,7 @@ function SetGlobalConst()
 
 		CC.ThingGapOut=10;      --物品图像显示四周留白
 		CC.ThingGapIn=5;        --物品图像显示中间间隔
+		CC.ThingDescLines=2;    --物品说明框行数(说明1行+需求/效果/制造)，放不下的行不显示
 
 	elseif CONFIG.Type==1 then
 
@@ -574,6 +591,7 @@ function SetGlobalConst()
 
 		CC.ThingGapOut=10;      --物品图像显示四周留白
 		CC.ThingGapIn=10;        --物品图像显示中间间隔
+		CC.ThingDescLines=6;     --物品说明框行数(说明1行+需求/效果/制造)
 	end
 
 

@@ -158,7 +158,7 @@ function JY_Main_sub()        --真正的游戏主程序入口
 
         lib.ShowSlow(50,1)
         JY.Status=GAME_SMAP;
-        JY.MMAPMusic=-1;
+        JY.MmapMusic=1;          --同原版：第一次离开小村回到主地图时播放音乐1
 
         CleanMemory();
 
@@ -221,7 +221,7 @@ function NewGame()     --选择新游戏，设置主角初始属性
         JY.Person[0]["特殊兵器"]=30;
         JY.Person[0]["暗器技巧"]=30;
         JY.Person[0]["生命增长"]=10;         --同原版baberuth
-        JY.Person[0]["生命最大值"]= JY.Person[0]["生命增长"]*3+29;
+        JY.Person[0]["生命最大值"]=50;       --同原版baberuth
         Cls();
         JY.Person[0]["资质"]=InputNumber(LANG.InputZizhi,0,100,100);
         JY.Person[0]["生命"]=JY.Person[0]["生命最大值"];
@@ -317,7 +317,7 @@ function Game_Cycle()       --游戏主循环
         if JY.Status==GAME_FIRSTMMAP then  --首次显示主场景，重新调用主场景贴图，渐变显示。然后转到正常显示
             CleanMemory();
             lib.ShowSlow(50,1)
-            JY.MmapMusic=16;
+            JY.MmapMusic=-1;     --同原版：读取进度后不换音乐
             JY.Status=GAME_MMAP;
 
             Init_MMap();
@@ -376,6 +376,47 @@ function GetWalkKey()
     return keypress;
 end
 
+--同原版：主地图和场景中站着不动时，约每11秒(原版200个时钟节拍)队员体力+1；
+--主地图上每走50步，受伤或中毒大于50的队员生命、内力、体力各减1(最少为1)
+function MapTimeTick(walking,mmap)
+    local t=lib.GetTime();
+    if walking then
+        JY.IdleLast=nil;
+        if mmap then
+            JY.WalkCount=(JY.WalkCount or 0)+1;
+            if JY.WalkCount>=50 then
+                JY.WalkCount=0;
+                for i=1,CC.TeamNum do
+                    local id=JY.Base["队伍" .. i];
+                    if id>=0 and (JY.Person[id]["受伤程度"]>50 or JY.Person[id]["中毒程度"]>50) then
+                        for _,k in ipairs({"生命","内力","体力"}) do
+                            if JY.Person[id][k]>1 then
+                                JY.Person[id][k]=JY.Person[id][k]-1;
+                            end
+                        end
+                    end
+                end
+            end
+        end
+        return;
+    end
+    if JY.IdleLast==nil or t-JY.IdleLast>500 then    --刚停下或者打开过菜单等，不计时
+        JY.IdleLast=t;
+        return;
+    end
+    JY.IdleTime=(JY.IdleTime or 0)+t-JY.IdleLast;
+    JY.IdleLast=t;
+    if JY.IdleTime>=CC.IdleRecoverTime then
+        JY.IdleTime=JY.IdleTime-CC.IdleRecoverTime;
+        for i=1,CC.TeamNum do
+            local id=JY.Base["队伍" .. i];
+            if id>=0 and JY.Person[id]["体力"]<100 then
+                JY.Person[id]["体力"]=JY.Person[id]["体力"]+1;
+            end
+        end
+    end
+end
+
 function Game_MMap()      --主地图
 
     local direct = -1;
@@ -399,6 +440,8 @@ function Game_MMap()      --主地图
             direct=1;
         end
     end
+
+    MapTimeTick(direct ~= -1,true);
 
     local x,y;              --按照方向键要到达的坐标
     if direct ~= -1 then   --按下了光标键
@@ -463,7 +506,7 @@ function Game_MMap()      --主地图
         lib.ShowSlow(50,1)
 
         JY.Status=GAME_SMAP;
-        JY.MMAPMusic=-1;
+        JY.MmapMusic=-1;
 
         JY.MyPic=GetMyPic();
         JY.Base["人X1"]=JY.Scene[JY.SubScene]["入口X"]
@@ -996,7 +1039,7 @@ function Menu_Doctor()       --医疗菜单
         menu1[i]={"",nil,0};
         local id=JY.Base["队伍" .. i]
         if id >=0 then
-            if JY.Person[id]["医疗能力"]>=20 then
+            if JY.Person[id]["医疗能力"]>=10 then      --同原版：医疗能力10以上
                  menu1[i][1]=string.format("%-10s%4d",JY.Person[id]["姓名"],JY.Person[id]["医疗能力"]);
                  menu1[i][3]=1;
             end
@@ -1028,9 +1071,6 @@ function Menu_Doctor()       --医疗菜单
         if r2 >0 then
             id2=JY.Base["队伍" .. r2];
             local num=ExecDoctor(id1,id2);
-            if num>0 then
-                AddPersonAttrib(id1,"体力",-2);
-            end
             DrawStrBoxWaitKey(string.format(LANG.HealResult,JY.Person[id2]["姓名"],num),C_ORANGE,CC.DefaultFont);
         end
     end
@@ -1069,12 +1109,11 @@ function ExecDoctor(id1,id2)      --执行医疗
             dec=m;            --原版受伤程度减少为完整医疗能力
         end
         AddPersonAttrib(id2,"受伤程度",-dec);
-        if JY.Status~=GAME_WMAP then  --战斗中由War_ExecuteMenu_Sub扣体力
-            AddPersonAttrib(id1,"体力",-2);
-        end
+        AddPersonAttrib(id1,"体力",-2);   --同原版每次医疗扣2点体力；战斗中War_ExecuteMenu_Sub再扣2点，共4点
         return AddPersonAttrib(id2,"生命",heal)
     end
 
+    AddPersonAttrib(id1,"体力",-2);       --同原版每次医疗扣2点体力（治不了也扣）
     local add=JY.Person[id1]["医疗能力"];
     local value=JY.Person[id2]["受伤程度"];
     if value > add+20 then
@@ -1107,7 +1146,7 @@ function Menu_DecPoison()         --解毒
         menu1[i]={"",nil,0};
         local id=JY.Base["队伍" .. i]
         if id>=0 then
-            if JY.Person[id]["解毒能力"]>=20 then
+            if JY.Person[id]["解毒能力"]>=10 then      --同原版：解毒能力10以上
                  menu1[i][1]=string.format("%-10s%4d",JY.Person[id]["姓名"],JY.Person[id]["解毒能力"]);
                  menu1[i][3]=1;
             end
@@ -1220,8 +1259,10 @@ function SelectThing(thing,thingnum)    --显示物品菜单
     local w=CC.ThingPicWidth*xnum+(xnum-1)*CC.ThingGapIn+2*CC.ThingGapOut;  --总体宽度
     local h=CC.ThingPicHeight*ynum+(ynum-1)*CC.ThingGapIn+2*CC.ThingGapOut; --物品栏高度
 
+    local lineh=CC.ThingFontSize+CC.RowPixel;
+    local desch=CC.ThingDescLines*lineh-CC.RowPixel+2*CC.MenuBorderPixel;    --说明框高度，说明下面显示装备/修炼需求
     local dx=(CC.ScreenW-w)/2;
-    local dy=(CC.ScreenH-h-2*(CC.ThingFontSize+2*CC.MenuBorderPixel+5))/2;
+    local dy=(CC.ScreenH-h-(CC.ThingFontSize+2*CC.MenuBorderPixel+5)-(desch+5))/2;
 
 
     local y1_1,y1_2,y2_1,y2_2,y3_1,y3_2;                  --名称，说明和图片的Y坐标
@@ -1237,7 +1278,7 @@ function SelectThing(thing,thingnum)    --显示物品菜单
         y1_2=y1_1+CC.ThingFontSize+2*CC.MenuBorderPixel;
         DrawBox(dx,y1_1,dx+w,y1_2,C_WHITE);
         y2_1=y1_2+5
-        y2_2=y2_1+CC.ThingFontSize+2*CC.MenuBorderPixel
+        y2_2=y2_1+desch;
         DrawBox(dx,y2_1,dx+w,y2_2,C_WHITE);
         y3_1=y2_2+5;
         y3_2=y3_1+h;
@@ -1262,6 +1303,10 @@ function SelectThing(thing,thingnum)    --显示物品菜单
 
                          DrawString(dx+CC.ThingGapOut,y1_1+CC.MenuBorderPixel,str,C_GOLD,CC.ThingFontSize);
                          DrawString(dx+CC.ThingGapOut,y2_1+CC.MenuBorderPixel,str2,C_ORANGE,CC.ThingFontSize);
+                         local infolines=ThingInfoLines(thing[id],w-2*CC.ThingGapOut,CC.ThingFontSize);
+                         for k=1,math.min(#infolines,CC.ThingDescLines-1) do
+                             DrawString(dx+CC.ThingGapOut,y2_1+CC.MenuBorderPixel+k*lineh,infolines[k],C_WHITE,CC.ThingFontSize);
+                         end
 
                     else
                         cur_thing=-1;
@@ -1327,6 +1372,168 @@ function SelectThing(thing,thingnum)    --显示物品菜单
 end
 
 
+--物品装备/修炼的需求，返回字符串数组(每个需求一项)。判断条件与CanUseThing/UseThing_Type2一致
+function ThingRequireText(id)
+    local t=JY.Thing[id];
+    local r={};
+    if t["类型"]~=1 and t["类型"]~=2 then
+        return r;
+    end
+    if t["仅修炼人物"]>=0 then
+        r[#r+1]=string.format(LANG.ReqOnly,JY.Person[t["仅修炼人物"]]["姓名"]);
+    end
+    if t["需内力性质"]==0 or t["需内力性质"]==1 then
+        r[#r+1]=LANG.ReqNeiliType[t["需内力性质"]];
+    end
+    for _,key in ipairs(CC.ThingRequire) do
+        if t[key]>0 then
+            r[#r+1]=string.format(LANG.ReqValue,LANG.ReqAttr[key],t[key]);
+        end
+    end
+    if t["需资质"]>0 then
+        r[#r+1]=string.format(LANG.ReqValue,LANG.ReqAttr["需资质"],t["需资质"]);
+    elseif t["需资质"]<0 then
+        r[#r+1]=string.format(LANG.ReqZizhiMax,-t["需资质"]);
+    end
+    if t["类型"]==2 and CC.Shemale[id]==1 then
+        r[#r+1]=LANG.ReqCastrate;
+    end
+    return r;
+end
+
+--数值效果文字，例如 攻击+15。全满的药(5000)显示为 生命全满
+local function ThingEffValue(key,v)
+    if v>=999 then
+        return string.format(LANG.EffFull,LANG.EffAttr[key]);
+    end
+    return string.format(LANG.EffValue,LANG.EffAttr[key],v);
+end
+
+--物品效果，返回字符串数组。判断条件与实际起作用的代码一致
+function ThingEffectText(id)
+    local t=JY.Thing[id];
+    local r={};
+    if t["类型"]==1 then                      --武器防具
+        for _,key in ipairs(CC.ThingEquipEffect) do
+            if t[key]~=0 then
+                r[#r+1]=ThingEffValue(key,t[key]);
+            end
+        end
+        for _,v in ipairs(CC.ExtraOffense) do
+            if v[1]==id then
+                r[#r+1]=string.format(LANG.EffCombo,JY.Wugong[v[2]]["名称"],v[3]);
+            end
+        end
+    elseif t["类型"]==2 then                  --武功秘笈，每次修炼成功的变化
+        if t["练出武功"]>=0 then
+            r[#r+1]=string.format(LANG.EffLearn,JY.Wugong[t["练出武功"]]["名称"]);
+        end
+        for _,key in ipairs(CC.ThingTrainEffect) do
+            if t[key]~=0 then
+                r[#r+1]=ThingEffValue(key,t[key]);
+            end
+        end
+        if t["改变内力性质"]==2 then
+            r[#r+1]=LANG.EffNeiliBoth;
+        end
+        if t["加攻击次数"]==1 then
+            r[#r+1]=LANG.EffDoubleAttack;
+        end
+    elseif t["类型"]==3 then                  --灵丹妙药
+        if t["加生命"]>0 then
+            r[#r+1]=ThingEffValue("加生命",t["加生命"]);
+        end
+        if t["加中毒解毒"]<0 then
+            r[#r+1]=string.format(LANG.EffDetox,math.modf(t["加中毒解毒"]/2));
+        end
+        for _,key in ipairs(CC.ThingDrugEffect) do
+            if t[key]~=0 then
+                r[#r+1]=ThingEffValue(key,t[key]);
+            end
+        end
+        if t["改变内力性质"]==2 then
+            r[#r+1]=LANG.EffNeiliBoth;
+        end
+    elseif t["类型"]==4 then                  --伤人暗器
+        if t["加生命"]<0 then
+            r[#r+1]=string.format(LANG.EffAnqiDamage,-t["加生命"]);
+        end
+        if t["加中毒解毒"]>0 then
+            r[#r+1]=string.format(LANG.EffAnqiPoison,t["加中毒解毒"]);
+        end
+    end
+    return r;
+end
+
+--修炼秘笈可以制造的物品，返回字符串数组和材料名称。与War_PersonTrainDrug一致
+function ThingMakeText(id)
+    local t=JY.Thing[id];
+    local r={};
+    if t["类型"]~=2 or t["练出物品需经验"]<=0 or t["需材料"]<0 then
+        return r,"";
+    end
+    for i=1,5 do
+        if t["练出物品" .. i]>=0 then
+            r[#r+1]=string.format(LANG.MakeItem,JY.Thing[t["练出物品" .. i]]["名称"],t["需要物品数量" .. i]);
+        end
+    end
+    return r,JY.Thing[t["需材料"]]["名称"];
+end
+
+--物品说明下面显示的全部文字行：需求、效果、可制造的物品。每部分另起一行，过长自动换行
+function ThingInfoLines(id,maxw,size)
+    local lines={};
+    local function add(items,title)
+        for _,s in ipairs(WrapTextItems(items,title,LANG.ReqSep,maxw,size)) do
+            lines[#lines+1]=s;
+        end
+    end
+    add(ThingRequireText(id),LANG.ReqTitle);
+    if JY.Thing[id]["类型"]==2 then
+        add(ThingEffectText(id),LANG.EffTrainTitle);
+    else
+        add(ThingEffectText(id),LANG.EffTitle);
+    end
+    local make,material=ThingMakeText(id);
+    add(make,string.format(LANG.MakeTitle,material));
+    return lines;
+end
+
+--字符串显示宽度：ASCII字符为半个字宽，其他为一个字宽
+function TextWidth(str,size)
+    local w=0;
+    for _,c in utf8.codes(str) do
+        if c<128 then
+            w=w+size/2;
+        else
+            w=w+size;
+        end
+    end
+    return w;
+end
+
+--把若干项文字排成多行，每行不超过maxw。第一行前面加title，各项之间用sep分隔。没有项时返回空数组
+function WrapTextItems(items,title,sep,maxw,size)
+    local lines={};
+    if #items==0 then
+        return lines;
+    end
+    local cur=title;
+    local empty=true;
+    for _,item in ipairs(items) do
+        local try=cur .. (empty and "" or sep) .. item;
+        if not empty and TextWidth(try,size)>maxw then
+            lines[#lines+1]=cur;
+            cur=item;
+        else
+            cur=try;
+        end
+        empty=false;
+    end
+    lines[#lines+1]=cur;
+    return lines;
+end
+
 --场景处理主函数
 function Game_SMap()         --场景处理主函数
 
@@ -1366,11 +1573,12 @@ function Game_SMap()         --场景处理主函数
         CleanMemory();
         lib.ShowSlow(50,1)
 
-        if JY.MMAPMusic<0 then
-            JY.MMAPMusic=JY.Scene[JY.SubScene]["出门音乐"];
+        if JY.MmapMusic<0 then
+            JY.MmapMusic=JY.Scene[JY.SubScene]["出门音乐"];
         end
 
         Init_MMap();
+        JY.MmapMusic=-1;         --同原版：指定的主地图音乐只用一次
 
 
 
@@ -1437,6 +1645,8 @@ function Game_SMap()         --场景处理主函数
     if JY.Status~=GAME_SMAP then
         return ;
     end
+
+    MapTimeTick(direct ~= -1,false);
 
     if direct ~= -1 then
         AddMyCurrentPic();
@@ -2139,12 +2349,23 @@ end
 
 --播放midi
 function PlayMIDI(id)             --播放midi
+    if id<0 then                  --同原版：-1 表示不换音乐
+        return ;
+    end
     JY.CurrentMIDI=id;
     if JY.EnableMusic==0 then
         return ;
     end
     if id>=0 then
-        lib.PlayMIDI(string.format(CC.MIDIFile,id+1));
+        for _,fmt in ipairs(CC.MIDIFile) do
+            local filename=string.format(fmt,id+1);
+            local f=io.open(filename,"rb");
+            if f then
+                f:close();
+                lib.PlayMIDI(filename);
+                break;
+            end
+        end
     end
 end
 
@@ -2554,6 +2775,14 @@ end
 --判断一个人是否可以装备或修炼一个物品
 --返回 true可以修炼，false不可
 function CanUseThing(id,personid)           --判断一个人是否可以装备或修炼一个物品
+    if JY.Thing[id]["类型"]==2 and JY.Thing[id]["练出武功"]>=0 then   --同原版：已经会这个武功的人可以直接修炼
+        for i=1,10 do
+            if JY.Person[personid]["武功" .. i]==JY.Thing[id]["练出武功"] then
+                return true;
+            end
+        end
+    end
+
     if JY.Thing[id]["仅修炼人物"] >=0 then
         if JY.Thing[id]["仅修炼人物"] ~= personid then
             return false;
@@ -2566,7 +2795,7 @@ function CanUseThing(id,personid)           --判断一个人是否可以装备�
         end
     end
 
-    if JY.Thing[id]["需内力"] > JY.Person[personid]["内力最大值"] then
+    if JY.Thing[id]["需内力"] > JY.Person[personid]["内力"] then     --同原版：比较当前内力
         return false;
     end
     if JY.Thing[id]["需攻击力"] > JY.Person[personid]["攻击力"] then
@@ -2645,22 +2874,21 @@ function UseThing_Type2(id)               --秘籍物品使用
             end
         end
 
-       if CC.Shemale[id]==1 then                --辟邪和葵花
-            if JY.Person[personid]["性别"]==0 then
+        if CC.Shemale[id]==1 and JY.Person[personid]["性别"]==1 then   --辟邪和葵花，女性不能修炼
+            DrawStrBoxWaitKey(LANG.CannotTrain,C_WHITE,CC.DefaultFont);
+            return 0;
+        end
+
+        if CanUseThing(id,personid) then
+            if CC.Shemale[id]==1 and JY.Person[personid]["性别"]==0 then    --同原版：符合条件后才问是否自宫
                 Cls(CC.MainSubMenuX,CC.MainSubMenuY,CC.ScreenW,CC.ScreenH);
                 if DrawStrBoxYesNo(-1,-1,LANG.AskCastrate,C_WHITE,CC.DefaultFont)==false then
                     return 0;
                 else
                     JY.Person[personid]["性别"]=2;
                 end
-            elseif JY.Person[personid]["性别"]==1 then
-                DrawStrBoxWaitKey(LANG.CannotTrain,C_WHITE,CC.DefaultFont);
-                return 0;
             end
-        end
 
-
-        if CanUseThing(id,personid) then
             if JY.Thing[id]["使用人"]==personid then
                 return 0;
             end
@@ -2671,8 +2899,7 @@ function UseThing_Type2(id)               --秘籍物品使用
 
             if JY.Thing[id]["使用人"]>=0 then
                 JY.Person[JY.Thing[id]["使用人"]]["修炼物品"]=-1;
-                JY.Person[JY.Thing[id]["使用人"]]["修炼点数"]=0;
-                JY.Person[JY.Thing[id]["使用人"]]["物品修炼点数"]=0;
+                JY.Person[JY.Thing[id]["使用人"]]["修炼点数"]=0;      --同原版不清除物品修炼点数
             end
 
             JY.Thing[id]["使用人"]=personid
@@ -2729,10 +2956,10 @@ function UseThingEffect(id,personid)          --药品使用实际效果
 
     if JY.Thing[id]["加生命"] >0 then
         local add=JY.Thing[id]["加生命"]-math.modf(JY.Person[personid]["受伤程度"]/2)+Rnd(10);
-        if add <=0 then
+        if add<0 then            --同原版：小于0时改为5-9，等于0不加生命
             add=5+Rnd(5);
         end
-        AddPersonAttrib(personid,"受伤程度",-JY.Thing[id]["加生命"]/4);
+        AddPersonAttrib(personid,"受伤程度",-(JY.Thing[id]["加生命"]//4));   --原版整数除法
         addvalue,str[strnum]=AddPersonAttrib(personid,"生命",add);
         if addvalue ~=0 then
             strnum=strnum+1
@@ -2751,7 +2978,7 @@ function UseThingEffect(id,personid)          --药品使用实际效果
     ThingAddAttrib("生命最大值");
 
     if JY.Thing[id]["加中毒解毒"] <0 then
-        addvalue,str[strnum]=AddPersonAttrib(personid,"中毒程度",math.modf(JY.Thing[id]["加中毒解毒"]/2));
+        addvalue,str[strnum]=AddPersonAttrib(personid,"中毒程度",math.modf(JY.Thing[id]["加中毒解毒"]/2)+Rnd(5)-Rnd(5));  --同原版有随机
         if addvalue ~=0 then
             strnum=strnum+1
         end
@@ -3271,6 +3498,16 @@ function instruct_10(personid)            --加入队员
         return ;
     end
 
+    --同原版：加入时不带装备和修炼物品
+    for _,k in ipairs({"武器","防具","修炼物品"}) do
+        local t=JY.Person[personid][k];
+        if t>=0 and JY.Thing[t]["使用人"]==personid then
+            JY.Thing[t]["使用人"]=-1;
+        end
+        JY.Person[personid][k]=-1;
+    end
+    JY.Person[personid]["修炼点数"]=0;
+
     for i =1,4 do                --个人物品归公
         local id =JY.Person[personid]["携带物品" .. i];
         local n=JY.Person[personid]["携带物品数量" .. i];
@@ -3426,8 +3663,7 @@ function instruct_21(personid)               --离队
         JY.Person[personid]["修炼物品"]=-1;
     end
 
-    JY.Person[personid]["修炼点数"]=0;
-    JY.Person[personid]["物品修炼点数"]=0;
+    JY.Person[personid]["修炼点数"]=0;      --同原版不清除物品修炼点数
 end
 
 
@@ -3687,9 +3923,9 @@ function instruct_33(personid,wugongid,flag)           --学会武功
         end
     end
 
-    if add==0 then      --，武功已满，覆盖最后一个武功
-        JY.Person[personid]["武功10" ]=wugongid;
-        JY.Person[personid]["武功等级10"]=0;
+    if add==0 then      --武功已满，同原版覆盖第一个武功
+        JY.Person[personid]["武功1" ]=wugongid;
+        JY.Person[personid]["武功等级1"]=0;
     end
 
     if flag==0 then
@@ -3700,7 +3936,9 @@ end
 --资质增加
 function instruct_34(id,value)              --资质增加
     local add,str=AddPersonAttrib(id,"资质",value);
-    DrawStrBoxWaitKey(JY.Person[id]["姓名"] .. str,C_ORANGE,CC.DefaultFont);
+    if add>0 then          --同原版：资质增加了才显示
+        DrawStrBoxWaitKey(JY.Person[id]["姓名"] .. str,C_ORANGE,CC.DefaultFont);
+    end
 end
 
 --设置武功
@@ -3869,7 +4107,7 @@ end
 
 function instruct_46(id,value)            --增加内力
     local add,str=AddPersonAttrib(id,"内力最大值",value);
-    AddPersonAttrib(id,"内力",0);
+    JY.Person[id]["内力"]=JY.Person[id]["内力最大值"];     --同原版：内力补满
     DrawStrBoxWaitKey(JY.Person[id]["姓名"] .. str,C_ORANGE,CC.DefaultFont);
 end
 
@@ -3882,7 +4120,7 @@ end
 
 function instruct_48(id,value)         --增加生命
     local add,str=AddPersonAttrib(id,"生命最大值",value);
-    AddPersonAttrib(id,"生命",0);
+    JY.Person[id]["生命"]=JY.Person[id]["生命最大值"];     --同原版：生命补满
     if instruct_16(id)==true then             --我方队员，显示增加
         DrawStrBoxWaitKey(JY.Person[id]["姓名"] .. str,C_ORANGE,CC.DefaultFont);
     end
@@ -4327,6 +4565,9 @@ function WarMain(warid,isexp)           --战斗主函数
 
     while true do             --战斗主循环
 
+        --同原版：每回合开始时重新按轻功排序。否则“等待”后的人会一直留在队尾
+        WarPersonSort();
+
         for i=0,WAR.PersonNum-1 do
             WAR.Person[i]["贴图"]=WarCalPersonPic(i);
         end
@@ -4398,6 +4639,12 @@ function WarMain(warid,isexp)           --战斗主函数
 
         War_PersonLostLife();
 
+        --中毒受伤掉血可能致死，马上判断，避免生命为0的人下一回合还能出手
+        warStatus=War_isEnd();
+        if warStatus>0 then
+            break;
+        end
+
     end
 
     local r;
@@ -4439,17 +4686,13 @@ end
 function War_PersonLostLife()             --计算战斗后每回合由于中毒或受伤而掉血
     for i=0,WAR.PersonNum-1 do
         local pid=WAR.Person[i]["人物编号"]
-        if WAR.Person[i]["死亡"]==false then
-            if JY.Person[pid]["受伤程度"]>0 then
-                local dec=math.modf(JY.Person[pid]["受伤程度"]/20);
-                AddPersonAttrib(pid,"生命",-dec);
-            end
-            if JY.Person[pid]["中毒程度"]>0 then
-                local dec=math.modf(JY.Person[pid]["中毒程度"]/10);
-                AddPersonAttrib(pid,"生命",-dec);
-            end
-            if JY.Person[pid]["生命"]<=0 then
-                JY.Person[pid]["生命"]=1;
+        local p=JY.Person[pid];
+        --同原版：只受伤或者生命、体力都大于0时中毒才掉血。生命正好减到0会死亡，小于0才改为1
+        if WAR.Person[i]["死亡"]==false and
+           (p["受伤程度"]>0 or (p["中毒程度"]>0 and p["生命"]>0 and p["体力"]>0)) then
+            p["生命"]=p["生命"]-math.modf(p["受伤程度"]/20)-math.modf(p["中毒程度"]/10);
+            if p["生命"]<0 then
+                p["生命"]=1;
             end
         end
     end
@@ -4467,23 +4710,6 @@ function War_EndPersonData(isexp,warStatus)            --战斗以后设置人�
             JY.Person[pid]["受伤程度"]=0;
             JY.Person[pid]["中毒程度"]=0;
         end
-    end
-
-    --我方人员参数恢复，输赢都有
-    for i=0,WAR.PersonNum-1 do
-        local pid=WAR.Person[i]["人物编号"]
-        if WAR.Person[i]["我方"]==true then
-            if JY.Person[pid]["生命"]<JY.Person[pid]["生命最大值"]/5 then
-                JY.Person[pid]["生命"]=math.modf(JY.Person[pid]["生命最大值"]/5);
-            end
-            if JY.Person[pid]["体力"]<10 then
-                JY.Person[pid]["体力"]=10 ;
-            end
-        end
-    end
-
-    if warStatus==2 and isexp==0 then  --输，没有经验，退出
-        return ;
     end
 
     local liveNum=0;          --计算我方活着的人数
@@ -4506,14 +4732,29 @@ function War_EndPersonData(isexp,warStatus)            --战斗以后设置人�
     end
 
 
-    --每个人经验增加，以及升级
+    --我方人员参数恢复，输赢都有。同原版：在计算活着的人数、分配经验之后才恢复，死亡的人不分经验
+    for i=0,WAR.PersonNum-1 do
+        local pid=WAR.Person[i]["人物编号"]
+        if WAR.Person[i]["我方"]==true then
+            if JY.Person[pid]["生命"]<=0 then          --死亡的人
+                JY.Person[pid]["生命"]=math.modf(JY.Person[pid]["生命最大值"]/5);
+                if JY.Person[pid]["体力"]<10 then
+                    JY.Person[pid]["体力"]=10 ;
+                end
+            elseif JY.Person[pid]["生命"]<JY.Person[pid]["生命最大值"]/5 then
+                JY.Person[pid]["生命"]=math.modf(JY.Person[pid]["生命最大值"]/5);
+            end
+        end
+    end
+
+    --每个人经验增加，以及升级。同原版：输了也增加战斗中获得的经验，只是不显示、不升级、不修炼
     for i=0,WAR.PersonNum-1 do
         local pid=WAR.Person[i]["人物编号"];
         AddPersonAttrib(pid,"物品修炼点数",math.modf(WAR.Person[i]["经验"]*8/10));
         AddPersonAttrib(pid,"修炼点数",math.modf(WAR.Person[i]["经验"]*8/10));
         AddPersonAttrib(pid,"经验",WAR.Person[i]["经验"]);
 
-        if WAR.Person[i]["我方"]==true then
+        if WAR.Person[i]["我方"]==true and (isexp==1 or warStatus==1) then
 
             DrawStrBoxWaitKey( string.format(LANG.GainExp,JY.Person[pid]["姓名"],WAR.Person[i]["经验"]),C_WHITE,CC.DefaultFont);
 
@@ -4522,10 +4763,10 @@ function War_EndPersonData(isexp,warStatus)            --战斗以后设置人�
             if r==true then
                 DrawStrBoxWaitKey( string.format(LANG.LevelUp,JY.Person[pid]["姓名"]),C_WHITE,CC.DefaultFont);
             end
-        end
 
-        War_PersonTrainBook(pid);            --修炼秘籍
-        War_PersonTrainDrug(pid);            --修炼药品
+            War_PersonTrainBook(pid);            --修炼秘籍，同原版只有我方
+            War_PersonTrainDrug(pid);            --修炼药品
+        end
     end
 end
 
@@ -4653,7 +4894,9 @@ function War_PersonTrainBook(pid)           --战斗后修炼秘籍是否成功
             for i =1,10 do
                 if p["武功" .. i]==wugongid then
                     oldwugong=1;
-                    p["武功等级" .. i]=p["武功等级" .. i]+100;
+                    if p["武功等级" .. i]<899 then          --同原版
+                        p["武功等级" .. i]=p["武功等级" .. i]+100;
+                    end
 
                     DrawStrBoxWaitKey(string.format(LANG.WugongLevelUpTrain,JY.Wugong[wugongid]["名称"],math.modf(p["武功等级" ..i]/100)+1),C_WHITE,CC.DefaultFont);
 
@@ -4725,10 +4968,10 @@ function War_PersonTrainDrug(pid)         --战斗后是否修炼出物品
 
             DrawStrBoxWaitKey(string.format(LANG.MakeThing,p["姓名"],JY.Thing[newThingID]["名称"]),C_WHITE,CC.DefaultFont);
 
-            if instruct_18(newThingID)==true then       --已经有物品
-                instruct_32(newThingID,1);
-            else
+            if instruct_18(newThingID)==true then       --已经有物品，同原版加1-3个
                 instruct_32(newThingID,1+Rnd(3));
+            else
+                instruct_32(newThingID,1);
             end
 
             instruct_32(JY.Thing[thingid]["需材料"],-JY.Thing[thingid]["需要物品数量" .. makeID]);
@@ -5027,11 +5270,13 @@ function War_Manual_Sub()                --手动战斗菜单
 
     local minv=War_GetMinNeiLi(pid);
 
-    if JY.Person[pid]["内力"] < minv or JY.Person[pid]["体力"] <10 then  --不能战斗
+    local tl=11;              --同原版：攻击、用毒需体力大于10，医疗需体力大于50
+
+    if JY.Person[pid]["内力"] < minv or JY.Person[pid]["体力"] <tl then  --不能战斗
         menu[2][3]=0;
     end
 
-    if JY.Person[pid]["体力"]<10 or JY.Person[pid]["用毒能力"]<20 then  --不能用毒
+    if JY.Person[pid]["体力"]<tl or JY.Person[pid]["用毒能力"]<20 then  --不能用毒
         menu[3][3]=0;
     end
 
@@ -5039,7 +5284,7 @@ function War_Manual_Sub()                --手动战斗菜单
         menu[4][3]=0;
     end
 
-    if JY.Person[pid]["体力"]<50 or JY.Person[pid]["医疗能力"]<20 then  --不能医疗
+    if JY.Person[pid]["体力"]<tl+40 or JY.Person[pid]["医疗能力"]<20 then  --不能医疗
         menu[5][3]=0;
     end
 
@@ -5087,8 +5332,11 @@ function War_GetMinNeiLi(pid)       --计算所有武功中需要内力最少的
     return minv;
 end
 
-function WarShowHead()               --显示战斗人头像
-    local pid=WAR.Person[WAR.CurID]["人物编号"];
+--id 战斗人编号，缺省为当前战斗人。当前战斗人我方显示在右下角，敌方显示在左上角；
+--其他人（光标选中的人）显示在当前战斗人头像的对角
+function WarShowHead(id)               --显示战斗人头像
+    id=id or WAR.CurID;
+    local pid=WAR.Person[id]["人物编号"];
     local p=JY.Person[pid];
 
     local h=16+2;
@@ -5096,7 +5344,11 @@ function WarShowHead()               --显示战斗人头像
     local height=100+2*CC.MenuBorderPixel+4*h;
     local x1,y1;
     local i=1;
-    if WAR.Person[WAR.CurID]["我方"]==true then
+    local bottomright=WAR.Person[WAR.CurID]["我方"]==true;
+    if id~=WAR.CurID then
+        bottomright=not bottomright;
+    end
+    if bottomright then
         x1=CC.ScreenW-width-10;
         y1=CC.ScreenH-height-10;
     else
@@ -5285,6 +5537,11 @@ function War_SelectMove()              ---选择移动位置
 
         WarDrawMap(1,x,y);
 
+        local target=GetWarMap(x,y,2);       --光标所在位置有人时显示他的状态
+        if target>=0 and target~=WAR.CurID and WAR.Person[target]["死亡"]==false then
+            WarShowHead(target);
+        end
+
         ShowScreen();
         local key=WaitKey();
         if key==VK_UP then
@@ -5313,6 +5570,14 @@ end
 function War_MovePerson(x,y)            --移动人物到位置x,y
 
     local movenum=GetWarMap(x,y,3);
+    if movenum>0 then      --同原版：剩余步数等于 轻功/10 时移动扣1点体力
+        local pid=WAR.Person[WAR.CurID]["人物编号"];
+        local q=math.modf(JY.Person[pid]["轻功"]/10);
+        local left=WAR.Person[WAR.CurID]["移动步数"];
+        if q<=left and q>left-movenum then
+            AddPersonAttrib(pid,"体力",-1);
+        end
+    end
     WAR.Person[WAR.CurID]["移动步数"]=WAR.Person[WAR.CurID]["移动步数"]-movenum;    --可移动步数减小
 
     local movetable={};  --   记录每步移动
@@ -5462,8 +5727,8 @@ function War_Fight_Sub(id,wugongnum,x,y)          --执行战斗
 
         WAR.Person[WAR.CurID]["经验"]=WAR.Person[WAR.CurID]["经验"]+2;
 
-        if JY.Person[pid]["武功等级" .. wugongnum]<900 then
-            JY.Person[pid]["武功等级" .. wugongnum]=JY.Person[pid]["武功等级" .. wugongnum]+Rnd(2)+1;
+        if JY.Person[pid]["武功等级" .. wugongnum]<999 then     --同原版：一直增长到999（显示仍为10级）
+            JY.Person[pid]["武功等级" .. wugongnum]=math.min(999,JY.Person[pid]["武功等级" .. wugongnum]+Rnd(2)+1);
         end
 
         if math.modf(JY.Person[pid]["武功等级" .. wugongnum]/100)+1 ~= level then    --武功升级了
@@ -5924,7 +6189,11 @@ function War_WugongHurtLife(emenyid,wugong,level)             --计算武功伤�
     end
 
     --计算攻击力
-    fightnum=fightnum+(JY.Person[pid]["攻击力"]*3+JY.Wugong[wugong]["攻击力" .. level ])/2;
+    if CONFIG.DIFFICULTY==1 then      --原版整数运算
+        fightnum=fightnum+(JY.Person[pid]["攻击力"]*3+JY.Wugong[wugong]["攻击力" .. level ])//2;
+    else
+        fightnum=fightnum+(JY.Person[pid]["攻击力"]*3+JY.Wugong[wugong]["攻击力" .. level ])/2;
+    end
 
     if JY.Person[pid]["武器"]>=0 then
         fightnum=fightnum+JY.Thing[JY.Person[pid]["武器"]]["加攻击力"];
@@ -5958,7 +6227,7 @@ function War_WugongHurtLife(emenyid,wugong,level)             --计算武功伤�
             end
         end
         if not skipmod then
-            hurt=hurt+JY.Person[pid]["体力"]/15+JY.Person[eid]["受伤程度"]/20;
+            hurt=hurt+JY.Person[pid]["体力"]//15+JY.Person[eid]["受伤程度"]//20;
         end
     else
         hurt=(fightnum-3*defencenum)*2/3+Rnd(20)-Rnd(20);
@@ -5972,15 +6241,26 @@ function War_WugongHurtLife(emenyid,wugong,level)             --计算武功伤�
     local offset=math.abs(WAR.Person[WAR.CurID]["坐标X"]-WAR.Person[emenyid]["坐标X"])+
                  math.abs(WAR.Person[WAR.CurID]["坐标Y"]-WAR.Person[emenyid]["坐标Y"]);
 
-    if offset <=10 then
-        hurt=hurt*(100-(offset-1)*3)/100;
+    if CONFIG.DIFFICULTY==1 then      --原版整数运算，最少1点
+        if offset <=10 then
+            hurt=hurt*(100-(offset-1)*3)//100;
+        else
+            hurt=hurt*2//3;
+        end
+        if hurt<1 then
+            hurt=1;
+        end
     else
-        hurt=hurt*2/3;
-    end
+        if offset <=10 then
+            hurt=hurt*(100-(offset-1)*3)/100;
+        else
+            hurt=hurt*2/3;
+        end
 
-    hurt=math.modf(hurt);
-    if hurt<=0 then
-        hurt=Rnd(8)+1;
+        hurt=math.modf(hurt);
+        if hurt<=0 then
+            hurt=Rnd(8)+1;
+        end
     end
 
     JY.Person[eid]["生命"]=JY.Person[eid]["生命"]-hurt;
@@ -6097,12 +6377,13 @@ function War_ExecuteMenu(flag,thingid)            ---执行医疗，解毒用毒
         Cls();
         return 0;
     else
-        return War_ExecuteMenu_Sub(x1,y1,flag,thingid);
+        return War_ExecuteMenu_Sub(x1,y1,flag,thingid,true);
     end
 end
 
 
-function War_ExecuteMenu_Sub(x1,y1,flag,thingid)     ---执行医疗，解毒用毒暗器的子函数，自动医疗也可调用
+--manual=true 手动菜单（原版手动发暗器的中毒公式与自动战斗不同）
+function War_ExecuteMenu_Sub(x1,y1,flag,thingid,manual)     ---执行医疗，解毒用毒暗器的子函数，自动医疗也可调用
     local pid=WAR.Person[WAR.CurID]["人物编号"];
     local x0=WAR.Person[WAR.CurID]["坐标X"];
     local y0=WAR.Person[WAR.CurID]["坐标Y"];
@@ -6135,7 +6416,7 @@ function War_ExecuteMenu_Sub(x1,y1,flag,thingid)     ---执行医疗，解毒用
              end
          elseif flag==4 then
              if WAR.Person[WAR.CurID]["我方"] ~= WAR.Person[emeny]["我方"] then       --是敌人
-                 WAR.Person[emeny]["点数"]=War_AnqiHurt(pid,WAR.Person[emeny]["人物编号"],thingid)
+                 WAR.Person[emeny]["点数"]=War_AnqiHurt(pid,WAR.Person[emeny]["人物编号"],thingid,manual)
                  SetWarMap(x1,y1,4,2);
                    WAR.Effect=2;
              end
@@ -6222,7 +6503,26 @@ function War_UseAnqi(id)          ---战斗使用暗器
 end
 
 
-function War_AnqiHurt(pid,emenyid,thingid)         --计算暗器伤害
+--同原版手动发暗器的中毒 (0x3a74f)，与难度无关：
+--毒性>0: 中毒 += ((毒性-暗器技巧)/2-抗毒)/2，抗毒>=100或为负时为0；毒性<=0: 中毒 += 毒性/2+Rnd(5)-Rnd(5)
+function War_AnqiManualPoison(pid,emenyid,thingid)
+    local function trunc(x) local i=math.modf(x); return i; end
+    local v=JY.Thing[thingid]["加中毒解毒"];
+    if v>0 then
+        local kd=JY.Person[emenyid]["抗毒能力"];
+        local p=trunc((v-JY.Person[pid]["暗器技巧"])/2)-kd;
+        if kd>=100 or p<0 then
+            p=0;
+        end
+        v=trunc(p/2);
+    else
+        v=trunc(v/2)+Rnd(5)-Rnd(5);
+    end
+    local oldp=JY.Person[emenyid]["中毒程度"];
+    AddPersonAttrib(emenyid,"中毒程度",limitX(oldp+v,0,99)-oldp);
+end
+
+function War_AnqiHurt(pid,emenyid,thingid,manual)         --计算暗器伤害
     if CONFIG.DIFFICULTY==1 then        --原版DOS逻辑 (~0x35b7d)
         local function trunc(x) local i=math.modf(x); return i; end
         local hp=JY.Thing[thingid]["加生命"];
@@ -6242,6 +6542,10 @@ function War_AnqiHurt(pid,emenyid,thingid)         --计算暗器伤害
         local newinj=limitX(injury-trunc(n/4),0,99);     --n为负值,受伤程度增加
         AddPersonAttrib(emenyid,"受伤程度",newinj-injury);
         local r=AddPersonAttrib(emenyid,"生命",n);
+        if manual then
+            War_AnqiManualPoison(pid,emenyid,thingid);
+            return r;
+        end
         local v=JY.Thing[thingid]["加中毒解毒"];
         if v<0 then
             v=trunc((v-JY.Person[pid]["暗器技巧"])/2);
@@ -6269,7 +6573,9 @@ function War_AnqiHurt(pid,emenyid,thingid)         --计算暗器伤害
 
     local r=AddPersonAttrib(emenyid,"生命",math.modf(num));
 
-    if JY.Thing[thingid]["加中毒解毒"]>0 then
+    if manual then
+        War_AnqiManualPoison(pid,emenyid,thingid);
+    elseif JY.Thing[thingid]["加中毒解毒"]>0 then
         num=math.modf((JY.Thing[thingid]["加中毒解毒"]+JY.Person[pid]["暗器技巧"])/2);
         num=num-JY.Person[emenyid]["抗毒能力"];
         num=limitX(num,0,CC.PersonAttribMax["用毒能力"]);
@@ -6281,13 +6587,16 @@ end
 --休息
 function War_RestMenu()           --休息
     local pid=WAR.Person[WAR.CurID]["人物编号"];
-    local v=3+Rnd(3);
+    --同原版 (0x3a8a4)：没有移动过才多加1点体力，体力30以上才恢复生命内力
+    local v=2+Rnd(3);
+    if WAR.Person[WAR.CurID]["移动步数"]==math.modf(JY.Person[pid]["轻功"]/10) then
+        v=v+1;
+    end
     AddPersonAttrib(pid,"体力",v);
-    if JY.Person[pid]["体力"]>30 then
-        v=3+Rnd(math.modf(JY.Person[pid]["体力"]/10)-2);
-        AddPersonAttrib(pid,"生命",v);
-        v=3+Rnd(math.modf(JY.Person[pid]["体力"]/10)-2);
-        AddPersonAttrib(pid,"内力",v);
+    if JY.Person[pid]["体力"]>=30 then
+        local n=math.modf(JY.Person[pid]["体力"]/10)-2;
+        AddPersonAttrib(pid,"生命",3+Rnd(n));
+        AddPersonAttrib(pid,"内力",3+Rnd(n));
     end
     return 1;
 end
