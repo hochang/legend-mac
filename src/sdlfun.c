@@ -27,6 +27,10 @@ extern int g_ScreenH ;
 extern int g_ScreenBpp ;
 
 extern int g_FullScreen;
+extern int g_WindowScale;
+
+static int g_HeldArrowKey=-1;          // 最近按下的方向键
+static Uint32 g_HeldArrowTime=0;       // 最近按下方向键的时间
 extern int g_EnableSound;
 extern int g_MusicVolume;
 extern int g_SoundVolume;
@@ -188,17 +192,23 @@ int InitGame(void)
     {
         Uint32 flags = SDL_WINDOW_SHOWN;
         if(g_FullScreen)
-            flags |= SDL_WINDOW_FULLSCREEN;
+            flags |= SDL_WINDOW_FULLSCREEN_DESKTOP;
         g_Window = SDL_CreateWindow("JY Legend",
             SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
-            w, h, flags);
+            w*g_WindowScale, h*g_WindowScale, flags);
         if(g_Window == NULL){
             JY_Error("Cannot create window: %s", SDL_GetError());
         }
         else{
-            g_Surface = SDL_GetWindowSurface(g_Window);
-            if(g_Surface == NULL)
+            // 游戏画在w*h的离屏表面上，显示时放大到窗口大小
+            SDL_Surface *ws = SDL_GetWindowSurface(g_Window);
+            if(ws == NULL)
                 JY_Error("Cannot get window surface: %s", SDL_GetError());
+            else
+                g_Surface = SDL_CreateRGBSurfaceWithFormat(0, w, h,
+                    ws->format->BitsPerPixel, ws->format->format);
+            if(g_Surface == NULL)
+                JY_Error("Cannot create screen surface: %s", SDL_GetError());
             SDL_RaiseWindow(g_Window);  // Ensure window has input focus
         }
     }
@@ -306,14 +316,44 @@ int JY_LoadPicture(const char* str,int x,int y)
 //flag = 0 显示全部表面  =1 按照JY_SetClip设置的矩形显示，如果没有矩形，则不显示
 int JY_ShowSurface(int flag)
 {
-	if(flag==1){
-		if(currentRect>0){
-			SDL_UpdateWindowSurfaceRects(g_Window,ClipRect,currentRect);
-		}
+	SDL_Surface *ws;
+	SDL_Rect dst;
+
+	if(flag==1 && currentRect<=0)
+		return 0;
+
+	ws=SDL_GetWindowSurface(g_Window);
+	if(ws==NULL)
+		return 1;
+
+	// 保持宽高比放大到窗口，多余部分填黑
+	if(ws->w*g_Surface->h <= ws->h*g_Surface->w){
+		dst.w=ws->w;
+		dst.h=ws->w*g_Surface->h/g_Surface->w;
 	}
 	else{
-        SDL_UpdateWindowSurface(g_Window);
+		dst.h=ws->h;
+		dst.w=ws->h*g_Surface->w/g_Surface->h;
 	}
+	dst.x=(ws->w-dst.w)/2;
+	dst.y=(ws->h-dst.h)/2;
+
+	if(dst.w!=ws->w || dst.h!=ws->h)
+		SDL_FillRect(ws,NULL,0);
+
+	{
+		// 复制时不使用g_Surface的裁剪矩形
+		SDL_Rect clip;
+		SDL_GetClipRect(g_Surface,&clip);
+		SDL_SetClipRect(g_Surface,NULL);
+		if(dst.w==g_Surface->w && dst.h==g_Surface->h)
+			SDL_BlitSurface(g_Surface,NULL,ws,&dst);
+		else
+			SDL_BlitScaled(g_Surface,NULL,ws,&dst);
+		SDL_SetClipRect(g_Surface,&clip);
+	}
+
+	SDL_UpdateWindowSurface(g_Window);
 	return 0;
 }
 
@@ -494,6 +534,11 @@ int JY_GetKey()
             break;
         case SDL_KEYDOWN:
             keyPress=event.key.keysym.sym;
+            if(event.key.repeat==0 && (keyPress==SDLK_UP || keyPress==SDLK_DOWN ||
+               keyPress==SDLK_LEFT || keyPress==SDLK_RIGHT)){
+                g_HeldArrowKey=keyPress;
+                g_HeldArrowTime=SDL_GetTicks();
+            }
             break;
         case SDL_MOUSEMOTION:
             break;
@@ -502,6 +547,25 @@ int JY_GetKey()
         }
 	}
 	return keyPress;
+}
+
+
+// 得到一直按住的方向键(最近按下的那个)。按住时间不足delay毫秒或已松开则返回-1
+// 用于走路时不依赖系统键盘重复速度
+int JY_GetHeldArrowKey(int delay)
+{
+    const Uint8 *state;
+    SDL_PumpEvents();
+    state=SDL_GetKeyboardState(NULL);
+    if(g_HeldArrowKey==-1)
+        return -1;
+    if(!state[SDL_GetScancodeFromKey(g_HeldArrowKey)]){
+        g_HeldArrowKey=-1;
+        return -1;
+    }
+    if(SDL_GetTicks()-g_HeldArrowTime < (Uint32)delay)
+        return -1;
+    return g_HeldArrowKey;
 }
 
 
@@ -964,14 +1028,12 @@ int JY_PlayMPEG(const char* filename,int esckey)
 int JY_FullScreen()
 {
     Uint32 flags = SDL_GetWindowFlags(g_Window);
-    if(flags & SDL_WINDOW_FULLSCREEN){
+    if(flags & SDL_WINDOW_FULLSCREEN_DESKTOP){
         SDL_SetWindowFullscreen(g_Window, 0);
     }
     else{
-        SDL_SetWindowFullscreen(g_Window, SDL_WINDOW_FULLSCREEN);
+        SDL_SetWindowFullscreen(g_Window, SDL_WINDOW_FULLSCREEN_DESKTOP);
     }
-    g_Surface = SDL_GetWindowSurface(g_Window);
-
     JY_ShowSurface(0);
 
     return 0;

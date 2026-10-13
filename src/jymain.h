@@ -239,6 +239,7 @@ int StopMIDI();
 int JY_PlayWAV(const char *filename);
 
 int JY_GetKey();
+int JY_GetHeldArrowKey(int delay);
 
 
 

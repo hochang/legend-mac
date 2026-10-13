@@ -345,6 +345,8 @@ function SetGlobalConst()
    CC.YScale=CONFIG.YScale;
 
    CC.Frame=50;     --每帧毫秒数
+   CC.WalkFrame=40;     --按住方向键走路时每步毫秒数
+   CC.WalkHoldDelay=200;   --按住方向键多少毫秒后开始连续走路
    CC.SceneMoveFrame=CC.Frame*2;           --场景移动帧速，用于场景移动事件
    CC.PersonMoveFrame=CC.Frame*2;          --主角移动速度，用于主角移动事件
    CC.AnimationFrame=CC.Frame*3;           --动画显示帧速，用于显示动画事件

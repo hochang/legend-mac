@@ -203,6 +203,31 @@ function NewGame()     --选择新游戏，设置主角初始属性
     LoadRecord(0); --  载入新游戏数据
     JY.Person[0]["姓名"]=CC.NewPersonName;
 
+    Cls();
+    if DrawStrBoxYesNo(-1,-1,"是否使用最高初始属性(Y/N)?",C_WHITE,CC.DefaultFont) == true then
+        JY.Person[0]["内力性质"]=2;          --阴阳调和
+        JY.Person[0]["内力最大值"]=40;
+        JY.Person[0]["攻击力"]=30;
+        JY.Person[0]["防御力"]=30;
+        JY.Person[0]["轻功"]=30;
+        JY.Person[0]["医疗能力"]=30;
+        JY.Person[0]["用毒能力"]=30;
+        JY.Person[0]["解毒能力"]=30;
+        JY.Person[0]["抗毒能力"]=30;
+        JY.Person[0]["拳掌功夫"]=30;
+        JY.Person[0]["御剑能力"]=30;
+        JY.Person[0]["耍刀技巧"]=30;
+        JY.Person[0]["特殊兵器"]=30;
+        JY.Person[0]["暗器技巧"]=30;
+        JY.Person[0]["生命增长"]=7;
+        JY.Person[0]["生命最大值"]= JY.Person[0]["生命增长"]*3+29;
+        Cls();
+        JY.Person[0]["资质"]=InputNumber("请输入资质(0-100):",0,100,100);
+        JY.Person[0]["生命"]=JY.Person[0]["生命最大值"];
+        JY.Person[0]["内力"]=JY.Person[0]["内力最大值"];
+        return;
+    end
+
     while true do
         JY.Person[0]["内力性质"]=Rnd(2);
         JY.Person[0]["内力最大值"]=Rnd(20)+21;
@@ -308,8 +333,12 @@ function Game_Cycle()       --游戏主循环
 
         local tend=lib.GetTime();
 
-        if tend-tstart<CC.Frame then
-            lib.Delay(CC.Frame-(tend-tstart));
+        local frame=CC.Frame;
+        if JY.Walking then         --按住方向键走路时加快帧速
+            frame=CC.WalkFrame;
+        end
+        if tend-tstart<frame then
+            lib.Delay(frame-(tend-tstart));
         end
     end
 end
@@ -334,10 +363,22 @@ function Init_MMap()   --初始化主地图数据
 end
 
 
+--走路时读取按键。按住方向键时每帧走一步，不依赖系统键盘重复速度
+function GetWalkKey()
+    local keypress=lib.GetKey();
+    if keypress==-1 then
+        keypress=lib.GetHeldArrowKey(CC.WalkHoldDelay);
+        JY.Walking=(keypress~=-1);
+    else
+        JY.Walking=false;
+    end
+    return keypress;
+end
+
 function Game_MMap()      --主地图
 
     local direct = -1;
-    local keypress = lib.GetKey();
+    local keypress = GetWalkKey();
     if keypress ~= -1 then
         JY.MyTick=0;
         if keypress==VK_ESCAPE then
@@ -1335,7 +1376,7 @@ function Game_SMap()         --场景处理主函数
     end
 
     local x,y;
-    local keypress = lib.GetKey();
+    local keypress = GetWalkKey();
     local direct=-1;
     if keypress ~= -1 then
         JY.MyTick=0;
@@ -1917,7 +1958,7 @@ function DrawStrBoxYesNo(x,y,str,color,size)        --显示字符串并询问Y/
     local menu={{"确定/是",nil,1},
                 {"取消/否",nil,2}};
 
-    local r=ShowMenu(menu,2,0,x+w-4*size-2*CC.MenuBorderPixel,y+h+CC.MenuBorderPixel,0,0,1,0,CC.DefaultFont,C_ORANGE, C_WHITE)
+    local r=ShowMenu(menu,2,0,x+w-4*size-2*CC.MenuBorderPixel,y+h+CC.MenuBorderPixel,0,0,1,0,CC.DefaultFont,C_ORANGE, C_WHITE,1)
 
     if r==1 then
         return true;
@@ -1927,6 +1968,53 @@ function DrawStrBoxYesNo(x,y,str,color,size)        --显示字符串并询问Y/
 
 end
 
+
+--是否为字母或数字键(含小键盘数字)
+function IsLetterOrDigitKey(keyPress)
+    return (keyPress>=97 and keyPress<=122) or          --a-z
+           (keyPress>=48 and keyPress<=57) or           --0-9
+           (keyPress>=1073741913 and keyPress<=1073741922);   --小键盘1-9,0
+end
+
+--显示提示并输入整数，数字键输入，退格删除，上下键加减，回车确认
+--返回 [minv,maxv] 范围内的整数，输入为空时返回default
+function InputNumber(str,minv,maxv,default)       --输入整数
+    local s="";
+    lib.GetKey();
+    while true do
+        Cls();
+        local shown=s;
+        if shown=="" then
+            shown=tostring(default);
+        end
+        DrawStrBox(-1,-1,str .. shown .. "_",C_WHITE,CC.DefaultFont);
+        ShowScreen();
+        local key=WaitKey();
+        lib.Delay(100);
+        local digit=nil;
+        if key>=48 and key<=57 then
+            digit=key-48;
+        elseif key>=1073741913 and key<=1073741921 then    --小键盘1-9
+            digit=key-1073741912;
+        elseif key==1073741922 then                        --小键盘0
+            digit=0;
+        end
+        if digit~=nil then
+            if tonumber(s .. digit)<=maxv then
+                s=tostring(tonumber(s .. digit));
+            end
+        elseif key==8 then                                 --退格
+            s=string.sub(s,1,-2);
+        elseif key==VK_UP or key==VK_DOWN then
+            local v=tonumber(s) or default;
+            if key==VK_UP then v=v+1 else v=v-1 end
+            s=tostring(limitX(v,minv,maxv));
+        elseif key==VK_RETURN or key==1073741912 then     --回车/小键盘回车
+            local v=tonumber(s) or default;
+            return limitX(v,minv,maxv);
+        end
+    end
+end
 
 --显示字符串并等待击键，字符串带框，显示在屏幕中间
 function DrawStrBoxWaitKey(s,color,size)          --显示字符串并等待击键
@@ -2046,7 +2134,9 @@ end
 --         >0 选中的菜单项(1表示第一项)
 --         <0 选中的菜单项，调用函数要求退出父菜单，这个用于退出多层菜单
 
-function ShowMenu(menuItem,numItem,numShow,x1,y1,x2,y2,isBox,isEsc,size,color,selectColor)     --通用菜单函数
+-- isYesNo      可选，为1时表示Y/N询问菜单：Y键选第一项，其他字母和数字键选第二项
+
+function ShowMenu(menuItem,numItem,numShow,x1,y1,x2,y2,isBox,isEsc,size,color,selectColor,isYesNo)     --通用菜单函数
     local w=0;
     local h=0;   --边框的宽高
     local i=0;
@@ -2148,6 +2238,12 @@ function ShowMenu(menuItem,numItem,numShow,x1,y1,x2,y2,isBox,isEsc,size,color,se
                 current = newNumItem;
                 start =current-num+1;
             end
+        elseif isYesNo==1 and keyPress==VK_Y then    --Y 选是
+            returnValue=1;
+            break;
+        elseif isYesNo==1 and IsLetterOrDigitKey(keyPress) then   --其他字母和数字键选否
+            returnValue=2;
+            break;
         elseif   (keyPress==VK_SPACE) or (keyPress==VK_RETURN)  then
             if newMenu[current][2]==nil then
                 returnValue=newMenu[current][4];

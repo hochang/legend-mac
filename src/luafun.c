@@ -103,6 +103,14 @@ int HAPI_GetKey(lua_State *pL)
 	return 1;
 }
 
+// 得到一直按住的方向键，按住时间不足delay毫秒时返回-1
+int HAPI_GetHeldArrowKey(lua_State *pL)
+{
+	int delay=(int)lua_tonumber(pL,1);
+	lua_pushnumber(pL,JY_GetHeldArrowKey(delay));
+	return 1;
+}
+
 int HAPI_EnableKeyRepeat(lua_State *pL)
 {
 	// SDL2 removed SDL_EnableKeyRepeat; key repeat is always enabled

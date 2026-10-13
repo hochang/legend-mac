@@ -26,6 +26,7 @@ int g_ScreenW=640 ;          // 屏幕宽高
 int g_ScreenH=480 ;
 int g_ScreenBpp=16 ;         // 屏幕色深
 int g_FullScreen=0;
+int g_WindowScale=1;         // 窗口放大倍数
 int g_EnableSound=1;         // 声音开关 0 关闭 1 打开
 int g_MusicVolume=32;           // 音乐声音大小
 int g_SoundVolume=32;           // 音效声音大小
@@ -57,6 +58,7 @@ static const struct luaL_Reg jylib [] = {
       {"Debug", HAPI_Debug},
 
       {"GetKey", HAPI_GetKey},
+      {"GetHeldArrowKey", HAPI_GetHeldArrowKey},
       {"EnableKeyRepeat", HAPI_EnableKeyRepeat},
 
       {"Delay", HAPI_Delay},
@@ -223,6 +225,9 @@ int Lua_Config(lua_State *pL,const char *filename)
 	g_ScreenH= getfield(pL, "Height");
 	g_ScreenBpp=  getfield(pL, "bpp");
 	g_FullScreen= getfield(pL, "FullScreen");
+	g_WindowScale= getfield(pL, "WindowScale");
+	if(g_WindowScale<1)
+		g_WindowScale=1;
 	g_XScale=  getfield(pL, "XScale");
  	g_YScale=  getfield(pL, "YScale");
     g_EnableSound =getfield(pL, "EnableSound");

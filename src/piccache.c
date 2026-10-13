@@ -443,6 +443,23 @@ static SDL_Surface* CreatePicSurface32(unsigned char *data, int w,int h,int data
 	SafeFree(data32);
    	
     SDL_SetColorKey(ps2, SDL_TRUE, ConvertColor(g_MaskColor32));  //透明色
+
+    // 目标格式带alpha通道时(如macOS窗口表面ARGB8888)，SDL2会启用混合模式，
+    // RLE编码将只按alpha判断透明而忽略colorkey，因此把透明色像素的alpha置0
+    if(ps2!=NULL && ps2->format->Amask!=0 && ps2->format->BytesPerPixel==4){
+        Uint32 key=ConvertColor(g_MaskColor32);
+        SDL_LockSurface(ps2);
+        for(i=0;i<ps2->h;i++){
+            Uint32 *pix=(Uint32*)((Uint8*)ps2->pixels+i*ps2->pitch);
+            for(j=0;j<ps2->w;j++){
+                if(pix[j]==key)
+                    pix[j]=0;
+            }
+        }
+        SDL_UnlockSurface(ps2);
+        SDL_SetSurfaceBlendMode(ps2, SDL_BLENDMODE_BLEND);
+    }
+
     SDL_SetSurfaceRLE(ps2, 1);  // RLE acceleration
 
     return ps2;
