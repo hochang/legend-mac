@@ -54,12 +54,18 @@ function SetGlobalConst()
    CC.ScreenW=CONFIG.Width;          --显示窗口宽高
    CC.ScreenH=CONFIG.Height;
 
+   --语言文件后缀，见config.lua中的CONFIG.Language。繁体使用无后缀的原有文件
+   CC.LangSuffix="";
+   if CONFIG.Language=="zh_CN" then
+       CC.LangSuffix="_zh_CN";
+   end
+
    --定义记录文件名。S和D由于是固定大小，因此不再定义idx了。
-   CC.R_IDXFilename={[0]=CONFIG.DataPath .. "ranger.idx",
+   CC.R_IDXFilename={[0]=CONFIG.DataPath .. "ranger" .. CC.LangSuffix .. ".idx",
                      CONFIG.DataPath .. "r1.idx",
 					 CONFIG.DataPath .. "r2.idx",
 					 CONFIG.DataPath .. "r3.idx",};
-   CC.R_GRPFilename={[0]=CONFIG.DataPath .. "ranger.grp",
+   CC.R_GRPFilename={[0]=CONFIG.DataPath .. "ranger" .. CC.LangSuffix .. ".grp",
                      CONFIG.DataPath .. "r1.grp",
 					 CONFIG.DataPath .. "r2.grp",
 					 CONFIG.DataPath .. "r3.grp",};
@@ -105,8 +111,8 @@ function SetGlobalConst()
    CC.WarMapFile={CONFIG.DataPath .. "warfld.idx",
                   CONFIG.DataPath .. "warfld.grp"};
 
-   CC.TalkIdxFile=CONFIG.ScriptPath .. "oldtalk.idx";
-   CC.TalkGrpFile=CONFIG.ScriptPath .. "oldtalk.grp";
+   CC.TalkIdxFile=CONFIG.ScriptPath .. "oldtalk" .. CC.LangSuffix .. ".idx";
+   CC.TalkGrpFile=CONFIG.ScriptPath .. "oldtalk" .. CC.LangSuffix .. ".grp";
 
    --定义记录文件R×结构。  lua不支持结构，无法直接从二进制文件中读取，因此需要这些定义，用table中不同的名字来仿真结构。
    CC.TeamNum=6;          --队伍人数
@@ -433,7 +439,7 @@ function SetGlobalConst()
                    {116,67,70},
                    {119,68,100},}
 
-    CC.NewPersonName="徐小侠";                --新游戏的数据
+    CC.NewPersonName=LANG.NewPersonName;      --新游戏的数据，见语言文件
     CC.NewGameSceneID=70;                      --场景ID
     CC.NewGameSceneX=19;                       --场景坐标
     CC.NewGameSceneY=20;

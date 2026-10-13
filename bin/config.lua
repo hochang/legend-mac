@@ -27,6 +27,15 @@ CONFIG.bpp  =16          -- 全屏时像素色深，一般为16或者32。在窗
 CONFIG.FullScreen=0      -- 启动时是否全屏  1 全屏 0 窗口
 CONFIG.EnableSound=1     -- 是否打开声音    1 打开 0 关闭   关闭了在游戏中无法打开
 
+CONFIG.DIFFICULTY=1      -- 战斗难度  1 原版DOS公式和敌人AI   2 lua移植版公式和加强的敌人AI
+
+-- 游戏文字语言(界面文字、人物/物品/武功/场景名称以及对话)
+--   "zh_CN" 简体中文：使用 script/lang/zh_CN.lua、data/ranger_zh_CN.grp 和 script/oldtalk_zh_CN.grp
+--   "zh_TW" 繁体中文：使用 script/lang/zh_TW.lua、data/ranger.grp 和 script/oldtalk.grp (移植版原有文件)
+-- 修改方法：把下面的值改为 "zh_CN" 或 "zh_TW"，保存后重新启动游戏即可。
+-- 读取旧存档时，名称会自动换成当前语言；主角姓名保持存档中的名字。
+CONFIG.Language="zh_CN";
+
 CONFIG.KeyRepeat=0       -- 是否激活键盘重复 0 不激活，只在走路菜单时键盘重复，1激活，包括对话的所有时候键盘均重复
 CONFIG.KeyRepeatDelay =300;   --第一次键盘重复等待ms数
 CONFIG.KeyRePeatInterval=30;  --一秒钟重复次数

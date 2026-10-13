@@ -1,2 +1,5 @@
 bin/*.txt
 bin/jy
+
+# 原版DOS游戏，仅作参考对照，不提交
+reference/

@@ -6,18 +6,18 @@
 --先定义本文件使用的局部函数
 
 --当铺
---对于价格表中有价格的，则可收。没有的，如果是药品则一律以10兩的价格收。
+--对于价格表中有价格的，则可收。没有的，如果是药品则一律以10两的价格收。
 local function Menu_Sale()
     local Price={};
-	Price[0]=1600;           --醉生梦死酒
-	Price[2]=1000;           --还魂液
+	Price[0]=1600;           --康倍特
+	Price[2]=1000;           --白岚氏鸡精
     Price[28]=600;           --茯苓首乌丸
     Price[29]=700;           --千年灵芝
     Price[34]=500;           --千年人参
     Price[35]=800;           --天山雪莲
 
 	Cls();
-    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,"请选择您要当掉的物品",C_WHITE,CC.DefaultFont);
+    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,LANG.WdbPawnSelect,C_WHITE,CC.DefaultFont);
     lib.ShowSurface();
 	lib.Delay(500);
 
@@ -40,7 +40,7 @@ local function Menu_Sale()
 	    if JY.Thing[r]["类型"]==3 then
 	        value=10;
 		else
-            DrawStrBoxWaitKey("抱歉，你这物品我们不收。",C_WHITE,CC.DefaultFont);
+            DrawStrBoxWaitKey(LANG.WdbPawnRefuse,C_WHITE,CC.DefaultFont);
 			Cls();
 			return 0;
 		end
@@ -48,7 +48,7 @@ local function Menu_Sale()
 	    value=Price[r];
 	end
 
-    if DrawStrBoxYesNo(-1,-1,string.format("%s价值%s兩银子，是否当掉?",JY.Thing[r]["名称"],value),C_WHITE,CC.DefaultFont,1) == true then
+    if DrawStrBoxYesNo(-1,-1,string.format(LANG.WdbPawnAsk,JY.Thing[r]["名称"],value),C_WHITE,CC.DefaultFont,1) == true then
         instruct_32(r,-1);                 --物品减少1
         instruct_32(CC.MoneyID,value);     --银子增加
     end
@@ -60,10 +60,10 @@ end
 
 
 local function Menu_Shop()
-    TalkEx("我们这里出售市面上没有的产品，欢迎选购",111,0);
+    TalkEx(LANG.WdbShopWelcome,111,0);
 
-	local ShopThing={ {0,2000},         --醉生梦死酒
-	                  {2,1200},          --还魂液
+	local ShopThing={ {0,2000},         --康倍特
+	                  {2,1200},          --白岚氏鸡精
 					  {28,800},}         --茯苓首乌丸
 
     local menu={};
@@ -78,11 +78,11 @@ local function Menu_Shop()
 
     if r>0 then
         if instruct_31(ShopThing[r][2])==false then
-            TalkEx("非常抱歉，你身上的钱似乎不够．",111,0);
+            TalkEx(LANG.WdbNoMoney,111,0);
         else
             instruct_32(CC.MoneyID,-ShopThing[r][2]);     --银子减少
             instruct_32(ShopThing[r][1],1);           --物品增加
-            TalkEx("欢迎下次光临！",111,0);
+            TalkEx(LANG.WdbThanks,111,0);
         end
     end
 
@@ -90,24 +90,24 @@ end
 
 
 local function Menu_Task()
-    TalkEx("欢迎光临佣兵行会，您可以选择任务",111,0);
+    TalkEx(LANG.WdbTaskWelcome,111,0);
 
-    local menu={ {"去沙漠消灭蜘蛛怪",nil,1,61,50},    --最后两个数据为战斗编号和赢后得到的钱数
-	             {"去南海杀大鳄鱼",nil,1,89,100},
-				 {"去长白山打雪怪",nil,1,6,200},
+    local menu={ {LANG.WdbTask1,nil,1,61,50},    --最后两个数据为战斗编号和赢后得到的钱数
+	             {LANG.WdbTask2,nil,1,89,100},
+				 {LANG.WdbTask3,nil,1,6,200},
 				 };
 
     local r=ShowMenu(menu,3,0,CC.MainSubMenuX,CC.MainSubMenuY+CC.SingleLineHeight,0,0,1,1,CC.DefaultFont,C_ORANGE, C_WHITE);
 
     if r>0 then
-        TalkEx("祝你好运！",111,0);
+        TalkEx(LANG.WdbGoodLuck,111,0);
 		if WarMain(menu[r][4],1)==true then
 		    instruct_13();
-            DrawStrBoxWaitKey(string.format("您的战斗胜利，获得%d兩银子！",menu[r][5]),C_WHITE,CC.DefaultFont);
+            DrawStrBoxWaitKey(string.format(LANG.WdbTaskWin,menu[r][5]),C_WHITE,CC.DefaultFont);
             instruct_32(CC.MoneyID,menu[r][5]);     --银子减少
 		else
 		    instruct_13();
-            DrawStrBoxWaitKey("战斗失败，抱歉没有银子可挣！",C_WHITE,CC.DefaultFont);
+            DrawStrBoxWaitKey(LANG.WdbTaskLose,C_WHITE,CC.DefaultFont);
 		end
 	end
 
@@ -119,7 +119,7 @@ end
 
 --去其他客栈
 local function Menu_Go()
-    TalkEx("您可以选择要去的客栈。",111,0);
+    TalkEx(LANG.WdbGoWhere,111,0);
     local Address={ {3,21,50},           --依次为场景id，出现在场景的XY坐标。注意这个坐标必须是空地。
 	                {40,26,43},
 					{60,26,42},
@@ -164,31 +164,31 @@ end
 	if v<0 then
 	    return ;
 	elseif v==0 then
-        Talk("咦？你刚才还在外面，怎么突然就到这里来了？莫不是使出了传说中的移行幻影之术？",0);
-		TalkEx("哈哈，你看错了。我是韦小宝的哥哥韦大宝，我们两个是孪生，所以很多人都会认错的。",111,0);
-        Talk("你既然是他哥哥，那么本领是不是比他大那么一点点呢？",0);
-		TalkEx("那当然，他的那些货色也只能哄哄新人，没他的货同样可以在江湖上混。我这里提供的都是特殊服务，你要不要试试看？",111,0);
-        Talk("你都提供哪些特殊服务啊？介绍一下先",0);
-		TalkEx("提供以下几种服务：典当服务，地下市场，佣兵行会，瞬息千里",111,0);
-        Talk("那典当服务就是当铺了？",0);
-		TalkEx("对，你身上用不着的东西，都可以进行在这里当掉。不过是死当，不能赊回的。当然，有些东西我们是不收的。我们只收药品。也回收地下市场出售的物品",111,0);
-        Talk("地下市场是什么？莫非是黑市？",0);
-		TalkEx("嘘！小声点，当心官差来了。这里提供市面上见不到的特殊物品。",111,0);
-        Talk("那佣兵行会是干什么的，难道也能接任务做？",0);
-		TalkEx("对啊！你是不是经常感到没钱花？我们可以给你提供挣钱的机会，给你任务做。可以挣钱的同时顺便练练级。",111,0);
-        Talk("有道理，那瞬息千里是干什么的？",0);
-		TalkEx("看你大老远跑到我这里来。我可以给你免费提供去其他客栈的服务，您一眨眼的功夫，就到了其他客栈了，岂不美哉？",111,0);
+        Talk(LANG.WdbIntro1,0);
+		TalkEx(LANG.WdbIntro2,111,0);
+        Talk(LANG.WdbIntro3,0);
+		TalkEx(LANG.WdbIntro4,111,0);
+        Talk(LANG.WdbIntro5,0);
+		TalkEx(LANG.WdbIntro6,111,0);
+        Talk(LANG.WdbIntro7,0);
+		TalkEx(LANG.WdbIntro8,111,0);
+        Talk(LANG.WdbIntro9,0);
+		TalkEx(LANG.WdbIntro10,111,0);
+        Talk(LANG.WdbIntro11,0);
+		TalkEx(LANG.WdbIntro12,111,0);
+        Talk(LANG.WdbIntro13,0);
+		TalkEx(LANG.WdbIntro14,111,0);
 
         SetD(JY.SubScene,JY.CurrentD,2,1)     --设置空格触发事件的值
     elseif v==1 then
-		TalkEx("要不要试试我提供的特殊服务？",111,0);
-        Talk("不错，不错。我来见识一下你的特殊服务。",0);
+		TalkEx(LANG.WdbAgain1,111,0);
+        Talk(LANG.WdbAgain2,0);
         Cls();
 
-		local menu={ {"典当服务",Menu_Sale,1},
-		             {"地下市场",Menu_Shop,1},
-		             {"佣兵行会",Menu_Task,1},
-					 {"瞬息千里",Menu_Go,1},}
+		local menu={ {LANG.WdbPawn,Menu_Sale,1},
+		             {LANG.WdbShop,Menu_Shop,1},
+		             {LANG.WdbTask,Menu_Task,1},
+					 {LANG.WdbGo,Menu_Go,1},}
         local nexty=CC.MainSubMenuY+CC.SingleLineHeight;
         local r=ShowMenu(menu,4,0,CC.MainSubMenuY,nexty,0,0,1,1,CC.DefaultFont,C_ORANGE,C_WHITE);
 		Cls();

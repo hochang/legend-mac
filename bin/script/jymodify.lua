@@ -26,8 +26,10 @@ function SetModify()
 
    --在此定义特殊物品。没有定义的均调用缺省物品函数
     JY.ThingUseFunction[182]=Show_Position;     --罗盘函数
-	JY.ThingUseFunction[0]=newThing_0;   --改变原来康贝特的功能为醉生梦死酒忘记武功。
-	JY.ThingUseFunction[2]=newThing_2;
+	-- 物品0(康倍特,+20体力)和物品2(白岚氏鸡精,+20生命)恢复原版药品功能，使用缺省药品函数。
+	-- 原改版覆盖(醉生梦死酒忘记武功 / 还魂液战斗复活)已停用，newThing_0/newThing_2 保留未用。
+	--JY.ThingUseFunction[0]=newThing_0;
+	--JY.ThingUseFunction[2]=newThing_2;
 
   --在此可以定义使用新事件函数的场景
     JY.SceneNewEventFunction[1]=newSceneEvent_1;          --新的河洛客栈事件处理函数
@@ -38,19 +40,19 @@ end
 --新的系统子菜单，增加控制音乐和音效
 function Menu_System_new()
 	local menu={
-	             {"读取进度",Menu_ReadRecord,1},
-                 {"保存进度",Menu_SaveRecord,1},
-				 {"关闭音乐",Menu_SetMusic,1},
-				 {"关闭音效",Menu_SetSound,1},
-				 {"全屏切换",Menu_FullScreen,1},
-                 {"离开游戏",Menu_Exit,1},   };
+	             {LANG.MenuLoad,Menu_ReadRecord,1},
+                 {LANG.MenuSave,Menu_SaveRecord,1},
+				 {LANG.MusicOff,Menu_SetMusic,1},
+				 {LANG.SoundOff,Menu_SetSound,1},
+				 {LANG.FullScreen,Menu_FullScreen,1},
+                 {LANG.ExitGame,Menu_Exit,1},   };
 
     if JY.EnableMusic==0 then
-	    menu[3][1]="打开音乐";
+	    menu[3][1]=LANG.MusicOn;
 	end
 
 	if JY.EnableSound==0 then
-	    menu[4][1]="打开音效";
+	    menu[4][1]=LANG.SoundOn;
     end
 
 
@@ -97,7 +99,7 @@ function Show_Position()
     if JY.Status ~=GAME_MMAP then
         return 0;
     end
-    DrawStrBoxWaitKey(string.format("当前位置(%d,%d)",JY.Base["人X"],JY.Base["人Y"]),C_ORANGE,CC.DefaultFont);
+    DrawStrBoxWaitKey(string.format(LANG.Position,JY.Base["人X"],JY.Base["人Y"]),C_ORANGE,CC.DefaultFont);
 	return 1;
 end
 
@@ -109,11 +111,11 @@ function newThing_0(id)
 	end
 
     Cls();
-    if DrawStrBoxYesNo(-1,-1,"喝后会忘记武功，但损害生命，是否继续?",C_WHITE,CC.DefaultFont,1) == false then
+    if DrawStrBoxYesNo(-1,-1,LANG.AskForget,C_WHITE,CC.DefaultFont,1) == false then
         return 0;
     end
     Cls();
-    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format("谁要服用%s?",JY.Thing[id]["名称"]),C_WHITE,CC.DefaultFont,1);
+    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format(LANG.AskDrinkWho,JY.Thing[id]["名称"]),C_WHITE,CC.DefaultFont,1);
 	local nexty=CC.MainSubMenuY+CC.SingleLineHeight;
     local r=SelectTeamMenu(CC.MainSubMenuX,nexty);
     if r<=0 then
@@ -141,14 +143,14 @@ function newThing_0(id)
         return 0;
     end
 
-    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format("请选择要忘记的武功"),C_WHITE,CC.DefaultFont,1);
+    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format(LANG.AskForgetWhich),C_WHITE,CC.DefaultFont,1);
 
 	r=ShowMenu(menu,numwugong,0,CC.MainSubMenuX,nexty,0,0,1,1,CC.DefaultFont,C_ORANGE,C_WHITE);
 
     if r<=0 then
 	    return 0;
     else
-        local s=string.format("%s 忘记武功 %s",JY.Person[pid]["姓名"],JY.Wugong[JY.Person[pid]["武功" .. r]]["名称"]);
+        local s=string.format(LANG.ForgetWugong,JY.Person[pid]["姓名"],JY.Wugong[JY.Person[pid]["武功" .. r]]["名称"]);
 		DrawStrBoxWaitKey(s,C_WHITE,24);
 
 		for i=r+1,10 do
@@ -189,7 +191,7 @@ function newThing_2(thingid)
 	end
 
 	Cls();
-    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format("请选择要复活的队友"),C_WHITE,CC.DefaultFont);
+    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format(LANG.AskReviveWho),C_WHITE,CC.DefaultFont);
 	local nexty=CC.MainSubMenuY+CC.SingleLineHeight;
     local r=ShowMenu(menu,WAR.PersonNum,0,CC.MainSubMenuX,nexty,0,0,1,1,CC.DefaultFont,C_ORANGE,C_WHITE);
     Cls();

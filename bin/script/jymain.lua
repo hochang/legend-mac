@@ -14,6 +14,7 @@
 --导入其他模块。之所以做成函数是为了避免编译查错时编译器会寻找这些模块。
 function IncludeFile()              --导入其他模块
     --dofile("config.lua");       --此文件在C函数中预先加载。这里就不加载了
+    dofile(CONFIG.ScriptPath .. "lang/" .. CONFIG.Language .. ".lua");   --语言文件，定义LANG
     dofile(CONFIG.ScriptPath .. "jyconst.lua");
     dofile(CONFIG.ScriptPath .. "jymodify.lua");
 end
@@ -135,22 +136,22 @@ function JY_Main_sub()        --真正的游戏主程序入口
     PlayMIDI(16);
     lib.ShowSlow(50,0);
 
-    local menu={  {"重新开始",nil,1},
-                  {"载入进度",nil,1},
-                  {"离开游戏",nil,1}  };
+    local menu={  {LANG.StartNew,nil,1},
+                  {LANG.StartLoad,nil,1},
+                  {LANG.ExitGame,nil,1}  };
     local menux=(CC.ScreenW-4*CC.StartMenuFontSize-2*CC.MenuBorderPixel)/2
 
     local menuReturn=ShowMenu(menu,3,0,menux,CC.StartMenuY,0,0,0,0,CC.StartMenuFontSize,C_STARTMENU, C_RED)
 
     if menuReturn == 1 then        --重新开始游戏
         Cls();
-        DrawString(menux,CC.StartMenuY,"请稍候...",C_RED,CC.StartMenuFontSize);
+        DrawString(menux,CC.StartMenuY,LANG.PleaseWait,C_RED,CC.StartMenuFontSize);
         ShowScreen();
 
         NewGame();          --设置新游戏数据
 
         JY.SubScene=CC.NewGameSceneID;         --新游戏直接进入场景
-        JY.Scene[JY.SubScene]["名称"]=JY.Person[0]["姓名"] .. "居";
+        JY.Scene[JY.SubScene]["名称"]=JY.Person[0]["姓名"] .. LANG.HomeSuffix;
         JY.Base["人X1"]=CC.NewGameSceneX;
         JY.Base["人Y1"]=CC.NewGameSceneY;
         JY.MyPic=CC.NewPersonPic;
@@ -169,15 +170,15 @@ function JY_Main_sub()        --真正的游戏主程序入口
 
     elseif menuReturn == 2 then         --载入旧的进度
         Cls();
-        local loadMenu={ {"进度一",nil,1},
-                         {"进度二",nil,1},
-                         {"进度三",nil,1} };
+        local loadMenu={ {LANG.Slot1,nil,1},
+                         {LANG.Slot2,nil,1},
+                         {LANG.Slot3,nil,1} };
 
         local menux=(CC.ScreenW-3*CC.StartMenuFontSize-2*CC.MenuBorderPixel)/2
 
         local r=ShowMenu(loadMenu,3,0,menux,CC.StartMenuY,0,0,0,0,CC.StartMenuFontSize,C_STARTMENU, C_RED)
         Cls();
-        DrawString(menux,CC.StartMenuY,"请稍候...",C_RED,CC.StartMenuFontSize);
+        DrawString(menux,CC.StartMenuY,LANG.PleaseWait,C_RED,CC.StartMenuFontSize);
         ShowScreen();
         LoadRecord(r);
         Cls();
@@ -204,7 +205,7 @@ function NewGame()     --选择新游戏，设置主角初始属性
     JY.Person[0]["姓名"]=CC.NewPersonName;
 
     Cls();
-    if DrawStrBoxYesNo(-1,-1,"是否使用最高初始属性(Y/N)?",C_WHITE,CC.DefaultFont) == true then
+    if DrawStrBoxYesNo(-1,-1,LANG.AskMaxAttrib,C_WHITE,CC.DefaultFont) == true then
         JY.Person[0]["内力性质"]=2;          --阴阳调和
         JY.Person[0]["内力最大值"]=40;
         JY.Person[0]["攻击力"]=30;
@@ -219,10 +220,10 @@ function NewGame()     --选择新游戏，设置主角初始属性
         JY.Person[0]["耍刀技巧"]=30;
         JY.Person[0]["特殊兵器"]=30;
         JY.Person[0]["暗器技巧"]=30;
-        JY.Person[0]["生命增长"]=7;
+        JY.Person[0]["生命增长"]=10;         --同原版baberuth
         JY.Person[0]["生命最大值"]= JY.Person[0]["生命增长"]*3+29;
         Cls();
-        JY.Person[0]["资质"]=InputNumber("请输入资质(0-100):",0,100,100);
+        JY.Person[0]["资质"]=InputNumber(LANG.InputZizhi,0,100,100);
         JY.Person[0]["生命"]=JY.Person[0]["生命最大值"];
         JY.Person[0]["内力"]=JY.Person[0]["内力最大值"];
         return;
@@ -268,24 +269,24 @@ function NewGame()     --选择新游戏，设置主角初始属性
         local y1=CC.NewGameY;
         local i=0;
 
-        local function DrawAttrib(str1,str2)    --定义内部函数
-            DrawString(x1+i*w,y1,str1,C_RED,fontsize);
+        local function DrawAttrib(str2)    --定义内部函数
+            DrawString(x1+i*w,y1,LANG.AttrShort[str2],C_RED,fontsize);
             DrawString(x1+i*w+fontsize*2,y1,string.format("%3d ",JY.Person[0][str2]),C_WHITE,fontsize);
             i=i+1;
         end
 
-        DrawString(x1,y1,"这样的属性满意吗(Y/N)?",C_GOLD,fontsize);
+        DrawString(x1,y1,LANG.AskAttribOK,C_GOLD,fontsize);
         i=0; y1=y1+h;
-        DrawAttrib("内力","内力"); DrawAttrib("攻击","攻击力"); DrawAttrib("轻功","轻功");  DrawAttrib("防御","防御力");
+        DrawAttrib("内力"); DrawAttrib("攻击力"); DrawAttrib("轻功");  DrawAttrib("防御力");
         i=0; y1=y1+h;
-        DrawAttrib("生命","生命"); DrawAttrib("医疗","医疗能力");DrawAttrib("用毒","用毒能力"); DrawAttrib("解毒","解毒能力");
+        DrawAttrib("生命"); DrawAttrib("医疗能力");DrawAttrib("用毒能力"); DrawAttrib("解毒能力");
         i=0; y1=y1+h;
-        DrawAttrib("拳掌","拳掌功夫"); DrawAttrib("御剑","御剑能力");  DrawAttrib("耍刀","耍刀技巧"); DrawAttrib("暗器","暗器技巧");DrawAttrib("资质","资质");
+        DrawAttrib("拳掌功夫"); DrawAttrib("御剑能力");  DrawAttrib("耍刀技巧"); DrawAttrib("暗器技巧");DrawAttrib("资质");
 
         ShowScreen();
 
-        local menu={{"是 ",nil,1},
-                    {"否 ",nil,2},
+        local menu={{LANG.Yes,nil,1},
+                    {LANG.No,nil,2},
                    };
         local ok=ShowMenu2(menu,2,0,x1+11*fontsize,CC.NewGameY-CC.MenuBorderPixel,0,0,0,0,fontsize,C_RED, C_WHITE)
         if ok==1 then
@@ -628,12 +629,12 @@ end
 
 --主菜单
 function MMenu()      --主菜单
-    local menu={      {"医疗",Menu_Doctor,1},
-                      {"解毒",Menu_DecPoison,1},
-                      {"物品",Menu_Thing,1},
-                      {"状态",Menu_Status,1},
-                      {"离队",Menu_PersonExit,1},
-                      {"系统",Menu_System,1},      };
+    local menu={      {LANG.MenuDoctor,Menu_Doctor,1},
+                      {LANG.MenuDetox,Menu_DecPoison,1},
+                      {LANG.MenuThing,Menu_Thing,1},
+                      {LANG.MenuStatus,Menu_Status,1},
+                      {LANG.MenuLeave,Menu_PersonExit,1},
+                      {LANG.MenuSystem,Menu_System,1},      };
     if JY.Status==GAME_SMAP then  --子场景，后两个菜单不可见
         menu[5][3]=0;
         menu[6][3]=0;
@@ -644,9 +645,9 @@ end
 
 --系统子菜单
 function Menu_System()         --系统子菜单
-    local menu={ {"读取进度",Menu_ReadRecord,1},
-                 {"保存进度",Menu_SaveRecord,1},
-                 {"离开游戏",Menu_Exit,1},   };
+    local menu={ {LANG.MenuLoad,Menu_ReadRecord,1},
+                 {LANG.MenuSave,Menu_SaveRecord,1},
+                 {LANG.ExitGame,Menu_Exit,1},   };
 
     local r=ShowMenu(menu,3,0,CC.MainSubMenuX,CC.MainSubMenuY,0,0,1,1,CC.DefaultFont,C_ORANGE, C_WHITE);
     if r == 0 then
@@ -659,7 +660,7 @@ end
 --离开菜单
 function Menu_Exit()      --离开菜单
     Cls();
-    if DrawStrBoxYesNo(-1,-1,"是否真的要离开游戏？",C_WHITE,CC.DefaultFont) == true then
+    if DrawStrBoxYesNo(-1,-1,LANG.AskExit,C_WHITE,CC.DefaultFont) == true then
         JY.Status =GAME_END;
     end
     return 1;
@@ -667,12 +668,12 @@ end
 
 --保存进度
 function Menu_SaveRecord()         --保存进度菜单
-    local menu={ {"进度一",nil,1},
-                 {"进度二",nil,1},
-                 {"进度三",nil,1},  };
+    local menu={ {LANG.Slot1,nil,1},
+                 {LANG.Slot2,nil,1},
+                 {LANG.Slot3,nil,1},  };
     local r=ShowMenu(menu,3,0,CC.MainSubMenuX2,CC.MainSubMenuY,0,0,1,1,CC.DefaultFont,C_ORANGE, C_WHITE);
     if r>0 then
-        DrawStrBox(CC.MainSubMenuX2,CC.MainSubMenuY,"请稍候......",C_WHITE,CC.DefaultFont);
+        DrawStrBox(CC.MainSubMenuX2,CC.MainSubMenuY,LANG.PleaseWaitLong,C_WHITE,CC.DefaultFont);
         ShowScreen();
         SaveRecord(r);
         Cls(CC.MainSubMenuX2,CC.MainSubMenuY,CC.ScreenW,CC.ScreenH);
@@ -682,15 +683,15 @@ end
 
 --读取进度
 function Menu_ReadRecord()        --读取进度菜单
-    local menu={ {"进度一",nil,1},
-                 {"进度二",nil,1},
-                 {"进度三",nil,1},  };
+    local menu={ {LANG.Slot1,nil,1},
+                 {LANG.Slot2,nil,1},
+                 {LANG.Slot3,nil,1},  };
     local r=ShowMenu(menu,3,0,CC.MainSubMenuX2,CC.MainSubMenuY,0,0,1,1,CC.DefaultFont,C_ORANGE, C_WHITE);
 
     if r == 0 then
         return 0;
     elseif r>0 then
-        DrawStrBox(CC.MainSubMenuX2,CC.MainSubMenuY,"请稍候......",C_WHITE,CC.DefaultFont);
+        DrawStrBox(CC.MainSubMenuX2,CC.MainSubMenuY,LANG.PleaseWaitLong,C_WHITE,CC.DefaultFont);
         ShowScreen();
         LoadRecord(r);
         JY.Status=GAME_FIRSTMMAP;
@@ -700,7 +701,7 @@ end
 
 --状态子菜单
 function Menu_Status()           --状态子菜单
-    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,"要查阅谁的状态",C_WHITE,CC.DefaultFont);
+    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,LANG.AskStatusWho,C_WHITE,CC.DefaultFont);
     local nexty=CC.MainSubMenuY+CC.SingleLineHeight;
 
     local r=SelectTeamMenu(CC.MainSubMenuX,nexty);
@@ -715,12 +716,12 @@ end
 
 --离队Exit
 function Menu_PersonExit()        --离队Exit
-    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,"要求谁离队",C_WHITE,CC.DefaultFont);
+    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,LANG.AskLeaveWho,C_WHITE,CC.DefaultFont);
     local nexty=CC.MainSubMenuY+CC.SingleLineHeight;
 
     local r=SelectTeamMenu(CC.MainSubMenuX,nexty);
     if r==1 then
-        DrawStrBoxWaitKey("抱歉！没有你游戏进行不下去",C_WHITE,CC.DefaultFont,1);
+        DrawStrBoxWaitKey(LANG.CannotLeave,C_WHITE,CC.DefaultFont,1);
     elseif r>1 then
         local personid=JY.Base["队伍" .. r];
         for i,v in ipairs(CC.PersonExit) do         --在离队列表中调用离队函数
@@ -819,11 +820,11 @@ function ShowPersonStatus_sub(id,page)    --显示人物状态页面
     i=6;
     DrawString(x1,y1+h*i,p["姓名"],C_WHITE,size);
     DrawString(x1+10*size/2,y1+h*i,string.format("%3d",p["等级"]),C_GOLD,size);
-    DrawString(x1+13*size/2,y1+h*i,"级",C_ORANGE,size);
+    DrawString(x1+13*size/2,y1+h*i,LANG.LevelUnit,C_ORANGE,size);
 
     local function DrawAttrib(str,color1,color2,v)    --定义内部函数
         v=v or 0;
-        DrawString(x1,y1+h*i,str,color1,size);
+        DrawString(x1,y1+h*i,AttrName(str),color1,size);
         DrawString(x1+x2,y1+h*i,string.format("%5d",p[str]+v),color2,size);
         i=i+1;
     end
@@ -838,7 +839,7 @@ if page==1 then
         color=RGB(232,32,44);
     end
     i=i+1;
-    DrawString(x1,y1+h*i,"生命",C_ORANGE,size);
+    DrawString(x1,y1+h*i,AttrName("生命"),C_ORANGE,size);
     DrawString(x1+2*size,y1+h*i,string.format("%5d",p["生命"]),color,size);
     DrawString(x1+9*size/2,y1+h*i,"/",C_GOLD,size);
 
@@ -859,7 +860,7 @@ if page==1 then
     else
         color=RGB(236,236,236);
     end
-    DrawString(x1,y1+h*i,"内力",C_ORANGE,size);
+    DrawString(x1,y1+h*i,AttrName("内力"),C_ORANGE,size);
     DrawString(x1+2*size,y1+h*i,string.format("%5d/%5d",p["内力"],p["内力最大值"]),color,size);
 
     i=i+1;
@@ -872,7 +873,7 @@ if page==1 then
         tmp=string.format("%5d",CC.Exp[p["等级"]]);
     end
 
-    DrawString(x1,y1+h*i,"升级",C_ORANGE,size);
+    DrawString(x1,y1+h*i,LANG.NextLevel,C_ORANGE,size);
     DrawString(x1+x2,y1+h*i,tmp,C_GOLD,size);
 
     local tmp1,tmp2,tmp3=0,0,0;
@@ -888,7 +889,7 @@ if page==1 then
     end
 
     i=i+1;
-    DrawString(x1,y1+h*i,"左右键翻页，上下键查看其它队友",C_RED,size);
+    DrawString(x1,y1+h*i,LANG.PageHint,C_RED,size);
 
 
     i=0;
@@ -911,17 +912,17 @@ if page==1 then
 
 elseif page==2 then
     i=i+1;
-    DrawString(x1,y1+h*i,"武器:",C_ORANGE,size);
+    DrawString(x1,y1+h*i,LANG.Weapon,C_ORANGE,size);
     if p["武器"]>-1 then
         DrawString(x1+size*3,y1+h*i,JY.Thing[p["武器"]]["名称"],C_GOLD,size);
     end
     i=i+1;
-    DrawString(x1,y1+h*i,"防具:",C_ORANGE,size);
+    DrawString(x1,y1+h*i,LANG.Armor,C_ORANGE,size);
     if p["防具"]>-1 then
         DrawString(x1+size*3,y1+h*i,JY.Thing[p["防具"]]["名称"],C_GOLD,size);
     end
     i=i+1;
-    DrawString(x1,y1+h*i,"修炼物品",C_ORANGE,size);
+    DrawString(x1,y1+h*i,LANG.TrainThing,C_ORANGE,size);
     local thingid=p["修炼物品"];
     if thingid>0 then
         i=i+1;
@@ -938,11 +939,11 @@ elseif page==2 then
     end
 
     i=i+1;
-    DrawString(x1,y1+h*i,"左右键翻页，上下键查看其它队友",C_RED,size);
+    DrawString(x1,y1+h*i,LANG.PageHint,C_RED,size);
 
     i=0;
     x1=dx+width/2;
-    DrawString(x1,y1+h*i,"所会功夫",C_ORANGE,size);
+    DrawString(x1,y1+h*i,LANG.KnownWugong,C_ORANGE,size);
     for j=1,10 do
         i=i+1
         local wugong=p["武功" .. j];
@@ -965,7 +966,7 @@ function TrainNeedExp(id)         --计算人物修炼物品成功需要的点�
     local r =0;
     if thingid >= 0 then
         if JY.Thing[thingid]["练出武功"] >=0 then
-            local level=0;          --此处的level是实际level-1。这样没有武功時和炼成一级是一样的。
+            local level=0;          --此处的level是实际level-1。这样没有武功时和炼成一级是一样的。
             for i =1,10 do               -- 查找当前已经炼成武功等级
                 if JY.Person[id]["武功" .. i]==JY.Thing[thingid]["练出武功"] then
                     level=math.modf(JY.Person[id]["武功等级" .. i] /100);
@@ -986,9 +987,9 @@ end
 
 --医疗菜单
 function Menu_Doctor()       --医疗菜单
-    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,"谁要使用医术",C_WHITE,CC.DefaultFont);
+    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,LANG.AskDoctorWho,C_WHITE,CC.DefaultFont);
     local nexty=CC.MainSubMenuY+CC.SingleLineHeight;
-    DrawStrBox(CC.MainSubMenuX,nexty,"医疗能力",C_ORANGE,CC.DefaultFont);
+    DrawStrBox(CC.MainSubMenuX,nexty,AttrName("医疗能力"),C_ORANGE,CC.DefaultFont);
 
     local menu1={};
     for i=1,CC.TeamNum do
@@ -1009,7 +1010,7 @@ function Menu_Doctor()       --医疗菜单
     if r >0 then
         id1=JY.Base["队伍" .. r];
         Cls(CC.MainSubMenuX,CC.MainSubMenuY,CC.ScreenW,CC.ScreenH);
-        DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,"要医治谁",C_WHITE,CC.DefaultFont);
+        DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,LANG.AskHealWho,C_WHITE,CC.DefaultFont);
         nexty=CC.MainSubMenuY+CC.SingleLineHeight;
 
         local menu2={};
@@ -1030,7 +1031,7 @@ function Menu_Doctor()       --医疗菜单
             if num>0 then
                 AddPersonAttrib(id1,"体力",-2);
             end
-            DrawStrBoxWaitKey(string.format("%s 生命增加 %d",JY.Person[id2]["姓名"],num),C_ORANGE,CC.DefaultFont);
+            DrawStrBoxWaitKey(string.format(LANG.HealResult,JY.Person[id2]["姓名"],num),C_ORANGE,CC.DefaultFont);
         end
     end
 
@@ -1044,6 +1045,34 @@ end
 function ExecDoctor(id1,id2)      --执行医疗
     if JY.Person[id1]["体力"]<50 then
         return 0;
+    end
+
+    if CONFIG.DIFFICULTY==1 then      --原版DOS公式 (exe 0x3a10c)
+        local skill=JY.Person[id1]["医疗能力"];
+        local m=math.max(skill,0);
+        local value=JY.Person[id2]["受伤程度"];
+        local heal,dec;
+        if value > skill+20 then
+            heal=0;
+            dec=0;
+        else
+            if value<=25 then
+                heal=m*4//5;
+            elseif value<=50 then
+                heal=m*3//4;
+            elseif value<=75 then
+                heal=m*2//3;
+            else
+                heal=m//2;
+            end
+            heal=heal+Rnd(5);
+            dec=m;            --原版受伤程度减少为完整医疗能力
+        end
+        AddPersonAttrib(id2,"受伤程度",-dec);
+        if JY.Status~=GAME_WMAP then  --战斗中由War_ExecuteMenu_Sub扣体力
+            AddPersonAttrib(id1,"体力",-2);
+        end
+        return AddPersonAttrib(id2,"生命",heal)
     end
 
     local add=JY.Person[id1]["医疗能力"];
@@ -1069,9 +1098,9 @@ end
 
 --解毒
 function Menu_DecPoison()         --解毒
-    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,"谁要帮人解毒",C_WHITE,CC.DefaultFont);
+    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,LANG.AskDetoxWho,C_WHITE,CC.DefaultFont);
     local nexty=CC.MainSubMenuY+CC.SingleLineHeight;
-    DrawStrBox(CC.MainSubMenuX,nexty,"解毒能力",C_ORANGE,CC.DefaultFont);
+    DrawStrBox(CC.MainSubMenuX,nexty,AttrName("解毒能力"),C_ORANGE,CC.DefaultFont);
 
     local menu1={};
     for i=1,CC.TeamNum do
@@ -1092,10 +1121,10 @@ function Menu_DecPoison()         --解毒
     if r >0 then
         id1=JY.Base["队伍" .. r];
          Cls(CC.MainSubMenuX,CC.MainSubMenuY,CC.ScreenW,CC.ScreenH);
-        DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,"替谁解毒",C_WHITE,CC.DefaultFont);
+        DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,LANG.AskDetoxTarget,C_WHITE,CC.DefaultFont);
         nexty=CC.MainSubMenuY+CC.SingleLineHeight;
 
-        DrawStrBox(CC.MainSubMenuX,nexty,"中毒程度",C_WHITE,CC.DefaultFont);
+        DrawStrBox(CC.MainSubMenuX,nexty,AttrName("中毒程度"),C_WHITE,CC.DefaultFont);
         nexty=nexty+CC.SingleLineHeight;
 
         local menu2={};
@@ -1112,7 +1141,7 @@ function Menu_DecPoison()         --解毒
         if r2 >0 then
             id2=JY.Base["队伍" .. r2];
             local num=ExecDecPoison(id1,id2);
-            DrawStrBoxWaitKey(string.format("%s 中毒程度减少 %d",JY.Person[id2]["姓名"],num),C_ORANGE,CC.DefaultFont);
+            DrawStrBoxWaitKey(string.format(LANG.DetoxResult,JY.Person[id2]["姓名"],num),C_ORANGE,CC.DefaultFont);
         end
     end
     Cls();
@@ -1136,12 +1165,12 @@ end
 --物品菜单
 function Menu_Thing()       --物品菜单
 
-    local menu={ {"全部物品",nil,1},
-                 {"剧情物品",nil,1},
-                 {"神兵宝甲",nil,1},
-                 {"武功秘笈",nil,1},
-                 {"灵丹妙药",nil,1},
-                 {"伤人暗器",nil,1}, };
+    local menu={ {LANG.ThingAll,nil,1},
+                 {LANG.ThingStory,nil,1},
+                 {LANG.ThingEquip,nil,1},
+                 {LANG.ThingBook,nil,1},
+                 {LANG.ThingDrug,nil,1},
+                 {LANG.ThingAnqi,nil,1}, };
 
     local r=ShowMenu(menu,CC.TeamNum,0,CC.MainSubMenuX,CC.MainSubMenuY,0,0,1,1,CC.DefaultFont,C_ORANGE, C_WHITE);
 
@@ -1706,6 +1735,10 @@ function LoadRecord(id)       -- 读取游戏进度
         setmetatable(JY.Wugong[i],meta_t);
     end
 
+    if id>0 then
+        LoadRecordText(idx);           --存档中的名称换成当前语言
+    end
+
     JY.ShopNum=math.floor((idx[6]-idx[5])/CC.ShopSize);     --小宝商店
     JY.Data_Shop=Byte.create(CC.ShopSize*JY.ShopNum);
     Byte.loadfile(JY.Data_Shop,CC.R_GRPFilename[id],idx[5],CC.ShopSize*JY.ShopNum);
@@ -1732,6 +1765,42 @@ end
 
 -- 写游戏进度
 -- id=0 新进度，=1/2/3 进度
+--把存档中人物/物品/场景/武功的名称和说明换成当前语言(CONFIG.Language)新游戏文件中的文字
+--这样切换语言后读取旧存档也能显示对应的文字。主角姓名保留存档中的名字
+function LoadRecordText(saveidx)
+    local data=Byte.create(6*4);
+    Byte.loadfile(data,CC.R_IDXFilename[0],0,6*4);
+    local idx={[0]=0};
+    for i=1,6 do
+        idx[i]=Byte.get32(data,4*(i-1));
+    end
+
+    local blocks={ {1,JY.Data_Person,CC.PersonSize,CC.Person_S},
+                   {2,JY.Data_Thing,CC.ThingSize,CC.Thing_S},
+                   {3,JY.Data_Scene,CC.SceneSize,CC.Scene_S},
+                   {4,JY.Data_Wugong,CC.WugongSize,CC.Wugong_S}, };
+    for _,b in ipairs(blocks) do
+        local k,dst,size,struct=b[1],b[2],b[3],b[4];
+        local num=math.min(math.floor((idx[k+1]-idx[k])/size),math.floor((saveidx[k+1]-saveidx[k])/size));
+        local src=Byte.create(num*size);
+        Byte.loadfile(src,CC.R_GRPFilename[0],idx[k],num*size);
+        for i=0,num-1 do
+            for key,v in pairs(struct) do
+                if v[2]==2 and not (k==1 and i==0 and key=="姓名") then
+                    Byte.setstr(dst,i*size+v[1],v[3],Byte.getstr(src,i*size+v[1],v[3]));
+                end
+            end
+        end
+    end
+
+    --主角仍是默认名字时，换成当前语言的写法
+    for _,name in ipairs(LANG.DefaultHeroNames) do
+        if JY.Person[0]["姓名"]==name then
+            JY.Person[0]["姓名"]=CC.NewPersonName;
+        end
+    end
+end
+
 function SaveRecord(id)         -- 写游戏进度
     --读取R*.idx文件
     local t1=lib.GetTime();
@@ -1955,8 +2024,8 @@ function DrawStrBoxYesNo(x,y,str,color,size)        --显示字符串并询问Y/
     end
 
     DrawStrBox(x,y,str,color,size);
-    local menu={{"确定/是",nil,1},
-                {"取消/否",nil,2}};
+    local menu={{LANG.YesBox,nil,1},
+                {LANG.NoBox,nil,2}};
 
     local r=ShowMenu(menu,2,0,x+w-4*size-2*CC.MenuBorderPixel,y+h+CC.MenuBorderPixel,0,0,1,0,CC.DefaultFont,C_ORANGE, C_WHITE,1)
 
@@ -2037,6 +2106,11 @@ end
 --value 要增加的值，负数表示减少
 --返回1,实际增加的值
 --返回2，字符串：xxx 增加/减少 xxxx，用于显示药品效果
+--属性的显示名称，见语言文件LANG.Attr
+function AttrName(str)
+    return LANG.Attr[str] or str;
+end
+
 function AddPersonAttrib(id,str,value)            --增加人物属性
     value = math.floor(value);
     local oldvalue=JY.Person[id][str];
@@ -2056,9 +2130,9 @@ function AddPersonAttrib(id,str,value)            --增加人物属性
 
     local showstr="";
     if add>0 then
-        showstr=string.format("%s 增加 %d",str,add);
+        showstr=string.format(LANG.AttrIncrease,AttrName(str),add);
     elseif add<0 then
-        showstr=string.format("%s 减少 %d",str,-add);
+        showstr=string.format(LANG.AttrDecrease,AttrName(str),-add);
     end
     return add,showstr;
 end
@@ -2442,7 +2516,7 @@ end
 
 --装备物品
 function UseThing_Type1(id)            --装备物品使用
-    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format("谁要配备%s?",JY.Thing[id]["名称"]),C_WHITE,CC.DefaultFont);
+    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format(LANG.AskEquipWho,JY.Thing[id]["名称"]),C_WHITE,CC.DefaultFont);
     local nexty=CC.MainSubMenuY+CC.SingleLineHeight;
     local r=SelectTeamMenu(CC.MainSubMenuX,nexty);
 
@@ -2468,7 +2542,7 @@ function UseThing_Type1(id)            --装备物品使用
             end
             JY.Thing[id]["使用人"]=personid
         else
-            DrawStrBoxWaitKey("此人不适合配备此物品",C_WHITE,CC.DefaultFont);
+            DrawStrBoxWaitKey(LANG.CannotEquip,C_WHITE,CC.DefaultFont);
             return 0;
         end
     end
@@ -2542,7 +2616,7 @@ end
 --秘籍物品
 function UseThing_Type2(id)               --秘籍物品使用
     if JY.Thing[id]["使用人"]>=0 then
-        if DrawStrBoxYesNo(-1,-1,"此物品已经有人修炼，是否换人修炼?",C_WHITE,CC.DefaultFont)==false then
+        if DrawStrBoxYesNo(-1,-1,LANG.AskRetrain,C_WHITE,CC.DefaultFont)==false then
             Cls(CC.MainSubMenuX,CC.MainSubMenuY,CC.ScreenW,CC.ScreenH);
             ShowScreen();
             return 0;
@@ -2550,7 +2624,7 @@ function UseThing_Type2(id)               --秘籍物品使用
     end
 
     Cls();
-    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format("谁要修炼%s?",JY.Thing[id]["名称"]),C_WHITE,CC.DefaultFont);
+    DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format(LANG.AskTrainWho,JY.Thing[id]["名称"]),C_WHITE,CC.DefaultFont);
     local nexty=CC.MainSubMenuY+CC.SingleLineHeight;
     local r=SelectTeamMenu(CC.MainSubMenuX,nexty);
 
@@ -2566,7 +2640,7 @@ function UseThing_Type2(id)               --秘籍物品使用
                 end
             end
             if yes==0 and JY.Person[personid]["武功10"]>0 then
-                DrawStrBoxWaitKey("一个人只能修炼10种武功",C_WHITE,CC.DefaultFont);
+                DrawStrBoxWaitKey(LANG.TooManyWugong,C_WHITE,CC.DefaultFont);
                 return 0;
             end
         end
@@ -2574,13 +2648,13 @@ function UseThing_Type2(id)               --秘籍物品使用
        if CC.Shemale[id]==1 then                --辟邪和葵花
             if JY.Person[personid]["性别"]==0 then
                 Cls(CC.MainSubMenuX,CC.MainSubMenuY,CC.ScreenW,CC.ScreenH);
-                if DrawStrBoxYesNo(-1,-1,"修炼此书必须先挥刀自宫，是否仍要修炼?",C_WHITE,CC.DefaultFont)==false then
+                if DrawStrBoxYesNo(-1,-1,LANG.AskCastrate,C_WHITE,CC.DefaultFont)==false then
                     return 0;
                 else
                     JY.Person[personid]["性别"]=2;
                 end
             elseif JY.Person[personid]["性别"]==1 then
-                DrawStrBoxWaitKey("此人不适合修炼此物品",C_WHITE,CC.DefaultFont);
+                DrawStrBoxWaitKey(LANG.CannotTrain,C_WHITE,CC.DefaultFont);
                 return 0;
             end
         end
@@ -2606,7 +2680,7 @@ function UseThing_Type2(id)               --秘籍物品使用
             JY.Person[personid]["修炼点数"]=0;
             JY.Person[personid]["物品修炼点数"]=0;
         else
-            DrawStrBoxWaitKey("此人不适合修炼此物品",C_WHITE,CC.DefaultFont);
+            DrawStrBoxWaitKey(LANG.CannotTrain,C_WHITE,CC.DefaultFont);
             return 0;
         end
     end
@@ -2619,7 +2693,7 @@ function UseThing_Type3(id)        --药品物品使用
     local usepersonid=-1;
     if JY.Status==GAME_MMAP or JY.Status==GAME_SMAP then
         Cls(CC.MainSubMenuX,CC.MainSubMenuY,CC.ScreenW,CC.ScreenH);
-        DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format("谁要使用%s?",JY.Thing[id]["名称"]),C_WHITE,CC.DefaultFont);
+        DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,string.format(LANG.AskUseWho,JY.Thing[id]["名称"]),C_WHITE,CC.DefaultFont);
         local nexty=CC.MainSubMenuY+CC.SingleLineHeight;
         local r=SelectTeamMenu(CC.MainSubMenuX,nexty);
         if r>0 then
@@ -2649,7 +2723,7 @@ end
 --返回值：0 使用没有效果，物品数量应该不变。1 使用有效果，则使用后物品数量应该-1
 function UseThingEffect(id,personid)          --药品使用实际效果
     local str={};
-    str[0]=string.format("使用 %s",JY.Thing[id]["名称"]);
+    str[0]=string.format(LANG.UseThing,JY.Thing[id]["名称"]);
     local strnum=1;
     local addvalue;
 
@@ -2686,7 +2760,7 @@ function UseThingEffect(id,personid)          --药品使用实际效果
     ThingAddAttrib("体力");
 
     if JY.Thing[id]["改变内力性质"] ==2 then
-        str[strnum]="内力门路改为阴阳合一"
+        str[strnum]=LANG.NeiliBoth
         strnum=strnum+1
     end
 
@@ -3066,7 +3140,7 @@ function instruct_2(thingid,num)            --得到物品
     end
 
     instruct_32(thingid,num);    --增加物品
-    DrawStrBoxWaitKey(string.format("得到物品:%s %d",JY.Thing[thingid]["名称"],num),C_ORANGE,CC.DefaultFont);
+    DrawStrBoxWaitKey(string.format(LANG.GetThing,JY.Thing[thingid]["名称"],num),C_ORANGE,CC.DefaultFont);
     instruct_2_sub();         --是否可得武林帖
 end
 
@@ -3154,7 +3228,7 @@ end
 
 
 function instruct_5()         --选择战斗
-    return DrawStrBoxYesNo(-1,-1,"是否与之过招(Y/N)?",C_ORANGE,CC.DefaultFont);
+    return DrawStrBoxYesNo(-1,-1,LANG.AskFight,C_ORANGE,CC.DefaultFont);
 end
 
 
@@ -3175,7 +3249,7 @@ end
 
 function instruct_9()                --是否要求加入队伍
     Cls();
-    return DrawStrBoxYesNo(-1,-1,"是否要求加入(Y/N)?",C_ORANGE,CC.DefaultFont);
+    return DrawStrBoxYesNo(-1,-1,LANG.AskJoin,C_ORANGE,CC.DefaultFont);
 end
 
 
@@ -3211,7 +3285,7 @@ end
 
 function instruct_11()              --是否住宿
     Cls();
-    return DrawStrBoxYesNo(-1,-1,"是否住宿(Y/N)?",C_ORANGE,CC.DefaultFont);
+    return DrawStrBoxYesNo(-1,-1,LANG.AskRest,C_ORANGE,CC.DefaultFont);
 end
 
 
@@ -3250,14 +3324,14 @@ function instruct_15()          --game over
 
     local x=CC.ScreenW-9*CC.DefaultFont;
     DrawString(x,10,os.date("%Y-%m-%d %H:%M"),RGB(216, 20, 24) ,CC.DefaultFont);
-    DrawString(x,10+CC.DefaultFont+CC.RowPixel,"在地球的某处",RGB(216, 20, 24) ,CC.DefaultFont);
-    DrawString(x,10+(CC.DefaultFont+CC.RowPixel)*2,"当地人口的失踪数",RGB(216, 20, 24) ,CC.DefaultFont);
-    DrawString(x,10+(CC.DefaultFont+CC.RowPixel)*3,"又多了一笔。。。",RGB(216, 20, 24) ,CC.DefaultFont);
+    DrawString(x,10+CC.DefaultFont+CC.RowPixel,LANG.GameOver1,RGB(216, 20, 24) ,CC.DefaultFont);
+    DrawString(x,10+(CC.DefaultFont+CC.RowPixel)*2,LANG.GameOver2,RGB(216, 20, 24) ,CC.DefaultFont);
+    DrawString(x,10+(CC.DefaultFont+CC.RowPixel)*3,LANG.GameOver3,RGB(216, 20, 24) ,CC.DefaultFont);
 
-    local loadMenu={ {"载入进度一",nil,1},
-                     {"载入进度二",nil,1},
-                     {"载入进度三",nil,1},
-                     {"回家睡觉去",nil,1} };
+    local loadMenu={ {LANG.GameOverLoad1,nil,1},
+                     {LANG.GameOverLoad2,nil,1},
+                     {LANG.GameOverLoad3,nil,1},
+                     {LANG.GameOverQuit,nil,1} };
     local y=CC.ScreenH-4*(CC.DefaultFont+CC.RowPixel)-10;
     local r=ShowMenu(loadMenu,4,0,x,y,0,0,0,0,CC.DefaultFont,C_ORANGE, C_WHITE)
 
@@ -3619,7 +3693,7 @@ function instruct_33(personid,wugongid,flag)           --学会武功
     end
 
     if flag==0 then
-        DrawStrBoxWaitKey(string.format("%s 学会武功 %s",JY.Person[personid]["姓名"],JY.Wugong[wugongid]["名称"]),C_ORANGE,CC.DefaultFont);
+        DrawStrBoxWaitKey(string.format(LANG.LearnWugong,JY.Person[personid]["姓名"],JY.Wugong[wugongid]["名称"]),C_ORANGE,CC.DefaultFont);
     end
 end
 
@@ -3851,12 +3925,12 @@ end
 
 
 function instruct_52()       --看品德
-    DrawStrBoxWaitKey(string.format("你现在的品德指数为: %d",JY.Person[0]["品德"]),C_ORANGE,CC.DefaultFont);
+    DrawStrBoxWaitKey(string.format(LANG.ShowMorality,JY.Person[0]["品德"]),C_ORANGE,CC.DefaultFont);
 end
 
 
 function instruct_53()        --看声望
-    DrawStrBoxWaitKey(string.format("你现在的声望指数为: %d",JY.Person[0]["声望"]),C_ORANGE,CC.DefaultFont);
+    DrawStrBoxWaitKey(string.format(LANG.ShowFame,JY.Person[0]["声望"]),C_ORANGE,CC.DefaultFont);
 end
 
 
@@ -3944,7 +4018,7 @@ function instruct_58()           --武道大会比武
             if WarMain(warnum + startwar, 0) ==true  then     --赢
                 instruct_0();
                 instruct_13();
-                TalkEx("还有那位前辈肯赐教？", 0, 1)
+                TalkEx(LANG.Wudao1, 0, 1)
                 instruct_0();
             else
                 instruct_15();
@@ -3953,7 +4027,7 @@ function instruct_58()           --武道大会比武
         end
 
         if i < group - 1 then
-            TalkEx("少侠已连战三场，*可先休息再战．", 70, 0);
+            TalkEx(LANG.Wudao2, 70, 0);
             instruct_0();
             instruct_14();
             lib.Delay(300);
@@ -3964,20 +4038,20 @@ function instruct_58()           --武道大会比武
                AddPersonAttrib(0,"生命",math.huge);
             end
             instruct_13();
-            TalkEx("我已经休息够了，*有谁要再上？",0,1);
+            TalkEx(LANG.Wudao3,0,1);
             instruct_0();
         end
     end
 
-    TalkEx("接下来换谁？**．．．．*．．．．***没有人了吗？",0,1);
+    TalkEx(LANG.Wudao4,0,1);
     instruct_0();
-    TalkEx("如果还没有人要出来向这位*少侠挑战，那麽这武功天下*第一之名，武林盟主之位，*就由这位少侠夺得．***．．．．．．*．．．．．．*．．．．．．*好，恭喜少侠，这武林盟主*之位就由少侠获得，而这把*”武林神杖”也由你保管．",70,0);
+    TalkEx(LANG.Wudao5,70,0);
     instruct_0();
-    TalkEx("恭喜少侠！",12,0);
+    TalkEx(LANG.Wudao6,12,0);
     instruct_0();
-    TalkEx("小兄弟，恭喜你！",64,4);
+    TalkEx(LANG.Wudao7,64,4);
     instruct_0();
-    TalkEx("好，今年的武林大会到此已*圆满结束，希望明年各位武*林同道能再到我华山一游．",19,0);
+    TalkEx(LANG.Wudao8,19,0);
     instruct_0();
     instruct_14();
     for i = 24,72 do
@@ -3985,7 +4059,7 @@ function instruct_58()           --武道大会比武
     end
     instruct_0();
     instruct_13();
-    TalkEx("历经千辛万苦，我终於打败*群雄，得到这武林盟主之位*及神杖．*但是”圣堂”在那呢？*为什麽没人告诉我，难道大*家都不知道．*这会儿又有的找了．", 0, 1)
+    TalkEx(LANG.Wudao9, 0, 1)
     instruct_0();
     instruct_2(143, 1)           --得到神杖
 
@@ -4068,7 +4142,7 @@ function instruct_64()                 --小宝卖东西
         return ;
     end
 
-    TalkEx("这位小哥，看看有什麽需要*的，小宝我卖的东西价钱绝*对公道．",headid,0);
+    TalkEx(LANG.XiaobaoWelcome,headid,0);
 
     local menu={};
     for i=1,5 do
@@ -4092,12 +4166,12 @@ function instruct_64()                 --小宝卖东西
 
     if r>0 then
         if instruct_31(JY.Shop[id]["物品价格" ..r])==false then
-            TalkEx("非常抱歉，*你身上的钱似乎不够．",headid,0);
+            TalkEx(LANG.XiaobaoNoMoney,headid,0);
         else
             JY.Shop[id]["物品数量" ..r]=JY.Shop[id]["物品数量" ..r]-1;
             instruct_32(CC.MoneyID,-JY.Shop[id]["物品价格" ..r]);
             instruct_32(JY.Shop[id]["物品" ..r],1);
-            TalkEx("大爷买了我小宝的东西，*保证绝不後悔．",headid,0);
+            TalkEx(LANG.XiaobaoThanks,headid,0);
         end
     end
 
@@ -4331,10 +4405,10 @@ function WarMain(warid,isexp)           --战斗主函数
     WAR.ShowHead=0;
 
     if warStatus==1 then
-        DrawStrBoxWaitKey("战斗胜利",C_WHITE,CC.DefaultFont);
+        DrawStrBoxWaitKey(LANG.WarWin,C_WHITE,CC.DefaultFont);
         r=true;
     elseif warStatus==2 then
-        DrawStrBoxWaitKey("战斗失败",C_WHITE,CC.DefaultFont);
+        DrawStrBoxWaitKey(LANG.WarLose,C_WHITE,CC.DefaultFont);
         r=false;
     end
 
@@ -4441,12 +4515,12 @@ function War_EndPersonData(isexp,warStatus)            --战斗以后设置人�
 
         if WAR.Person[i]["我方"]==true then
 
-            DrawStrBoxWaitKey( string.format("%s 获得经验点数 %d",JY.Person[pid]["姓名"],WAR.Person[i]["经验"]),C_WHITE,CC.DefaultFont);
+            DrawStrBoxWaitKey( string.format(LANG.GainExp,JY.Person[pid]["姓名"],WAR.Person[i]["经验"]),C_WHITE,CC.DefaultFont);
 
             local r=War_AddPersonLevel(pid);     --人物升级
 
             if r==true then
-                DrawStrBoxWaitKey( string.format("%s 升级了",JY.Person[pid]["姓名"]),C_WHITE,CC.DefaultFont);
+                DrawStrBoxWaitKey( string.format(LANG.LevelUp,JY.Person[pid]["姓名"]),C_WHITE,CC.DefaultFont);
             end
         end
 
@@ -4507,27 +4581,25 @@ function War_AddPersonLevel(pid)      --人物是否升级
     AddPersonAttrib(pid,"防御力",  cleveradd*leveladd);
     AddPersonAttrib(pid,"轻功",  cleveradd*leveladd);
 
-    if JY.Person[pid]["医疗能力"]>=20 then
+    if JY.Person[pid]["医疗能力"]>20 then
         AddPersonAttrib(pid,"医疗能力",  Rnd(3));
     end
-    if JY.Person[pid]["用毒能力"]>=20 then
+    if JY.Person[pid]["用毒能力"]>20 then
         AddPersonAttrib(pid,"用毒能力",  Rnd(3));
     end
-    if JY.Person[pid]["解毒能力"]>=20 then
+    if JY.Person[pid]["解毒能力"]>20 then
         AddPersonAttrib(pid,"解毒能力",  Rnd(3));
     end
-    if JY.Person[pid]["拳掌功夫"]>=20 then
+    if JY.Person[pid]["拳掌功夫"]>20 then
         AddPersonAttrib(pid,"拳掌功夫",  Rnd(3));
     end
-    if JY.Person[pid]["御剑能力"]>=20 then
+    if JY.Person[pid]["御剑能力"]>20 then
         AddPersonAttrib(pid,"御剑能力",  Rnd(3));
     end
-    if JY.Person[pid]["耍刀技巧"]>=20 then
+    if JY.Person[pid]["耍刀技巧"]>20 then
         AddPersonAttrib(pid,"耍刀技巧",  Rnd(3));
     end
-    if JY.Person[pid]["暗器技巧"]>=20 then
-        AddPersonAttrib(pid,"暗器技巧",  Rnd(3));
-    end
+    AddPersonAttrib(pid,"暗器技巧",  Rnd(3));      --原版暗器技巧每次升级都增长
 
     return true;
 
@@ -4548,7 +4620,7 @@ function War_PersonTrainBook(pid)           --战斗后修炼秘籍是否成功
 
     if p["修炼点数"]>=needpoint then   --修炼成功
 
-        DrawStrBoxWaitKey( string.format("%s 修炼 %s 成功",p["姓名"],JY.Thing[thingid]["名称"]),C_WHITE,CC.DefaultFont);
+        DrawStrBoxWaitKey( string.format(LANG.TrainSuccess,p["姓名"],JY.Thing[thingid]["名称"]),C_WHITE,CC.DefaultFont);
 
         AddPersonAttrib(pid,"生命最大值",JY.Thing[thingid]["加生命最大值"]);
         if JY.Thing[thingid]["改变内力性质"]==2 then
@@ -4583,7 +4655,7 @@ function War_PersonTrainBook(pid)           --战斗后修炼秘籍是否成功
                     oldwugong=1;
                     p["武功等级" .. i]=p["武功等级" .. i]+100;
 
-                    DrawStrBoxWaitKey(string.format("%s 升为第%s级",JY.Wugong[wugongid]["名称"],math.modf(p["武功等级" ..i]/100)+1),C_WHITE,CC.DefaultFont);
+                    DrawStrBoxWaitKey(string.format(LANG.WugongLevelUpTrain,JY.Wugong[wugongid]["名称"],math.modf(p["武功等级" ..i]/100)+1),C_WHITE,CC.DefaultFont);
 
                     break;
                 end
@@ -4651,7 +4723,7 @@ function War_PersonTrainDrug(pid)         --战斗后是否修炼出物品
             end
             local newThingID=JY.Thing[thingid]["练出物品" .. makeID];
 
-            DrawStrBoxWaitKey(string.format("%s 制造出 %s",p["姓名"],JY.Thing[newThingID]["名称"]),C_WHITE,CC.DefaultFont);
+            DrawStrBoxWaitKey(string.format(LANG.MakeThing,p["姓名"],JY.Thing[newThingID]["名称"]),C_WHITE,CC.DefaultFont);
 
             if instruct_18(newThingID)==true then       --已经有物品
                 instruct_32(newThingID,1);
@@ -4747,12 +4819,12 @@ function WarSelectTeam()            --选择我方参战人
         end
     end
 
-    menu[CC.TeamNum+1]={" 结束",nil,1}
+    menu[CC.TeamNum+1]={LANG.SelectEnd,nil,1}
 
     while true do
         Cls();
         local x=(CC.ScreenW-7*CC.DefaultFont-2*CC.MenuBorderPixel)/2;
-        DrawStrBox(x,10,"请选择参战人物",C_WHITE,CC.DefaultFont);
+        DrawStrBox(x,10,LANG.SelectTeam,C_WHITE,CC.DefaultFont);
         local r=ShowMenu(menu,CC.TeamNum+1,0,x,10+CC.SingleLineHeight,0,0,1,0,CC.DefaultFont,C_ORANGE,C_WHITE);
         Cls();
 
@@ -4921,7 +4993,7 @@ end
 
 --手动战斗
 --id 战斗人物编号
---返回，选中菜单编号，选中"等待"时有效，
+--返回，选中菜单编号，选中LANG.WarWait时有效，
 function War_Manual()        --手动战斗
     local r;
     while true do
@@ -4938,16 +5010,16 @@ end
 
 function War_Manual_Sub()                --手动战斗菜单
     local pid=WAR.Person[WAR.CurID]["人物编号"];
-    local menu={ {"移动",War_MoveMenu,1},
-                 {"攻击",War_FightMenu,1},
-                 {"用毒",War_PoisonMenu,1},
-                 {"解毒",War_DecPoisonMenu,1},
-                 {"医疗",War_DoctorMenu,1},
-                 {"物品",War_ThingMenu,1},
-                 {"等待",War_WaitMenu,1},
-                 {"状态",War_StatusMenu,1},
-                 {"休息",War_RestMenu,1},
-                 {"自动",War_AutoMenu,1},   };
+    local menu={ {LANG.WarMove,War_MoveMenu,1},
+                 {LANG.WarFight,War_FightMenu,1},
+                 {LANG.WarPoison,War_PoisonMenu,1},
+                 {LANG.MenuDetox,War_DecPoisonMenu,1},
+                 {LANG.MenuDoctor,War_DoctorMenu,1},
+                 {LANG.MenuThing,War_ThingMenu,1},
+                 {LANG.WarWait,War_WaitMenu,1},
+                 {LANG.MenuStatus,War_StatusMenu,1},
+                 {LANG.WarRest,War_RestMenu,1},
+                 {LANG.WarAuto,War_AutoMenu,1},   };
 
     if JY.Person[pid]["体力"]<=5 or WAR.Person[WAR.CurID]["移动步数"]<=0 then  --不能移动
         menu[1][3]=0;
@@ -4963,7 +5035,7 @@ function War_Manual_Sub()                --手动战斗菜单
         menu[3][3]=0;
     end
 
-    if JY.Person[pid]["体力"]<10 or JY.Person[pid]["解毒能力"]<20 then  --不能解毒
+    if JY.Person[pid]["体力"]<=50 or JY.Person[pid]["解毒能力"]<20 then  --不能解毒，原版需体力大于50
         menu[4][3]=0;
     end
 
@@ -4978,12 +5050,36 @@ function War_Manual_Sub()                --手动战斗菜单
 end
 
 
+--武功在某等级下消耗的内力
+--DIFFICULTY==1: 原版DOS公式 floor(level/2)*消耗内力点数 (1级武功不耗内力)
+--DIFFICULTY==2: lua移植版公式 floor((level+1)/2)*消耗内力点数
+function War_NeiliCost(wugong,level)
+    local half;
+    if CONFIG.DIFFICULTY==1 then
+        half=math.modf(level/2);
+    else
+        half=math.modf((level+1)/2);
+    end
+    return half*JY.Wugong[wugong]["消耗内力点数"];
+end
+
+--根据当前内力计算实际可发出的武功等级(最低1级)
+function War_EffectiveLevel(pid,wugong,level)
+    while level>0 and War_NeiliCost(wugong,level) > JY.Person[pid]["内力"] do
+        level=level-1;
+    end
+    if level<=0 then
+        level=1;
+    end
+    return level;
+end
+
 function War_GetMinNeiLi(pid)       --计算所有武功中需要内力最少的
     local minv=math.huge;
     for i=1,10 do
         local tmpid=JY.Person[pid]["武功" .. i];
         if tmpid >0 then
-            if JY.Wugong[tmpid]["消耗内力点数"]< minv then
+            if JY.Wugong[tmpid]["消耗内力点数"]< minv then     --原版也按原始消耗判断能否攻击
                 minv=JY.Wugong[tmpid]["消耗内力点数"];
             end
         end
@@ -5027,7 +5123,7 @@ function WarShowHead()               --显示战斗人头像
     else
         color=RGB(232,32,44);
     end
-    DrawString(x1,y1+h,"生命",C_ORANGE,16);
+    DrawString(x1,y1+h,AttrName("生命"),C_ORANGE,16);
     DrawString(x1+40,y1+h,string.format("%4d",p["生命"]),color,16);
     DrawString(x1+40+32,y1+h,"/",C_GOLD,16);
     if p["中毒程度"]==0 then
@@ -5047,10 +5143,10 @@ function WarShowHead()               --显示战斗人头像
     else
         color=RGB(236,236,236);
     end
-    DrawString(x1,y1+h*2,"内力",C_ORANGE,16);
+    DrawString(x1,y1+h*2,AttrName("内力"),C_ORANGE,16);
     DrawString(x1+40,y1+h*2,string.format("%4d/%4d",p["内力"],p["内力最大值"]),color,16);
 
-    DrawString(x1,y1+h*3,"体力",C_ORANGE,16);
+    DrawString(x1,y1+h*3,AttrName("体力"),C_ORANGE,16);
     DrawString(x1+40,y1+h*3,string.format("%4d",p["体力"]),C_GOLD,16);
 end
 
@@ -5334,6 +5430,7 @@ function War_Fight_Sub(id,wugongnum,x,y)          --执行战斗
     end
 
     for k=1,fightnum  do         --如果左右互搏，则攻击两次
+        local uselevel=War_EffectiveLevel(pid,wugong,level);   --本次攻击实际使用的武功等级(原版按此扣内力)
         for i=0,CC.WarWidth-1 do
             for j=0,CC.WarHeight-1 do
                 local effect=GetWarMap(i,j,4);
@@ -5371,14 +5468,18 @@ function War_Fight_Sub(id,wugongnum,x,y)          --执行战斗
 
         if math.modf(JY.Person[pid]["武功等级" .. wugongnum]/100)+1 ~= level then    --武功升级了
             level=math.modf(JY.Person[pid]["武功等级" .. wugongnum]/100)+1;
-            DrawStrBox(-1,-1,string.format("%s 升为 %d 级",JY.Wugong[wugong]["名称"],level),C_ORANGE,CC.DefaultFont)
+            DrawStrBox(-1,-1,string.format(LANG.WugongLevelUp,JY.Wugong[wugong]["名称"],level),C_ORANGE,CC.DefaultFont)
             ShowScreen();
             lib.Delay(500);
             Cls();
             ShowScreen();
         end
 
-        AddPersonAttrib(pid,"内力",-math.modf((level+1)/2)*JY.Wugong[wugong]["消耗内力点数"])
+        if CONFIG.DIFFICULTY==1 then
+            AddPersonAttrib(pid,"内力",-War_NeiliCost(wugong,uselevel))
+        else
+            AddPersonAttrib(pid,"内力",-War_NeiliCost(wugong,level))
+        end
 
     end
 
@@ -5422,7 +5523,7 @@ function War_FightSelectType1(wugong,level,x,y)            --选择线攻击
 
     if x==nil and y==nil  then
         direct =-1;
-        DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,"请选择攻击方向",C_ORANGE,CC.DefaultFont)
+        DrawStrBox(CC.MainSubMenuX,CC.MainSubMenuY,LANG.SelectDirection,C_ORANGE,CC.DefaultFont)
         ShowScreen();
 
         while true do           --选择方向
@@ -5786,35 +5887,32 @@ end
 --wugong  我方使用武功
 --返回：伤害点数
 function War_WugongHurtLife(emenyid,wugong,level)             --计算武功伤害生命
+    local fulllevel=level;     --未经内力削减的真实武功等级（原版中毒计算使用）
     local pid=WAR.Person[WAR.CurID]["人物编号"];
     local eid=WAR.Person[emenyid]["人物编号"];
 
     --计算武学常识
     local mywuxue=0;
     local emenywuxue=0;
+    -- DIFFICULTY==1 (原版 0x39188): 另需生命>0, 每人加 2*武学常识
+    local wuxueOrig = (CONFIG.DIFFICULTY==1);
     for i=0,WAR.PersonNum-1 do
         local id =WAR.Person[i]["人物编号"]
-        if WAR.Person[i]["死亡"]==false and JY.Person[id]["武学常识"]>80 then
+        if WAR.Person[i]["死亡"]==false and JY.Person[id]["武学常识"]>80
+           and (not wuxueOrig or JY.Person[id]["生命"]>0) then
+            local wx = JY.Person[id]["武学常识"];
+            if wuxueOrig then wx = 2*wx; end
             if WAR.Person[WAR.CurID]["我方"]==WAR.Person[i]["我方"] then
-                mywuxue=mywuxue+JY.Person[id]["武学常识"];
+                mywuxue=mywuxue+wx;
             else
-                emenywuxue=emenywuxue+JY.Person[id]["武学常识"];
+                emenywuxue=emenywuxue+wx;
             end
         end
     end
 
     --计算实际使用武功等级
-    while true do
-        if math.modf((level+1)/2)*JY.Wugong[wugong]["消耗内力点数"] > JY.Person[pid]["内力"] then
-            level=level-1;
-        else
-            break;
-        end
-    end
-
-    if level<=0 then     --防止出现左右互博时第一次攻击完毕，第二次攻击没有内力的情况。
-        level=1;
-    end
+    --防止出现左右互博时第一次攻击完毕，第二次攻击没有内力的情况(最低1级)。
+    level=War_EffectiveLevel(pid,wugong,level);
 
     --武功武器配合增加攻击力
     local fightnum=0;
@@ -5847,17 +5945,34 @@ function War_WugongHurtLife(emenyid,wugong,level)             --计算武功伤�
     defencenum= defencenum+ emenywuxue;
 
     --计算实际伤害
-    local hurt=(fightnum-3*defencenum)*2/3+Rnd(20)-Rnd(20);
-    if hurt <0 then
-        hurt=Rnd(10)+1;
+    local hurt;
+    if CONFIG.DIFFICULTY==1 then
+        -- 原版DOS: 整数运算; 防御高于攻击时 hurt=攻击/10+Rnd(4)-Rnd(4), 若仍<0则为0且不加体力/受伤修正
+        hurt=math.modf((fightnum-3*defencenum)*2/3)+Rnd(20)-Rnd(20);
+        local skipmod=false;
+        if hurt<=0 then
+            hurt=math.modf(fightnum/10)+Rnd(4)-Rnd(4);
+            if hurt<0 then
+                hurt=0;
+                skipmod=true;
+            end
+        end
+        if not skipmod then
+            hurt=hurt+JY.Person[pid]["体力"]/15+JY.Person[eid]["受伤程度"]/20;
+        end
+    else
+        hurt=(fightnum-3*defencenum)*2/3+Rnd(20)-Rnd(20);
+        if hurt <0 then
+            hurt=Rnd(10)+1;
+        end
+        hurt=hurt+JY.Person[pid]["体力"]/15+JY.Person[eid]["受伤程度"]/20;
     end
-    hurt=hurt+JY.Person[pid]["体力"]/15+JY.Person[eid]["受伤程度"]/20;
 
     --考虑距离因素
     local offset=math.abs(WAR.Person[WAR.CurID]["坐标X"]-WAR.Person[emenyid]["坐标X"])+
                  math.abs(WAR.Person[WAR.CurID]["坐标Y"]-WAR.Person[emenyid]["坐标Y"]);
 
-    if offset <10 then
+    if offset <=10 then
         hurt=hurt*(100-(offset-1)*3)/100;
     else
         hurt=hurt*2/3;
@@ -5879,10 +5994,20 @@ function War_WugongHurtLife(emenyid,wugong,level)             --计算武功伤�
     AddPersonAttrib(eid,"受伤程度",math.modf(hurt/10));
 
     --敌人中毒点数
-    local poisonnum=level*JY.Wugong[wugong]["敌人中毒点数"]+JY.Person[pid]["攻击带毒"];
+    if CONFIG.DIFFICULTY==1 then
+        --原版DOS：使用未经内力削减的真实武功等级；中毒增量为(毒点数-抗毒)/15，上限99
+        local poisonnum=fulllevel*JY.Wugong[wugong]["敌人中毒点数"]+JY.Person[pid]["攻击带毒"];
+        local kangdu=JY.Person[eid]["抗毒能力"];
+        if poisonnum>kangdu and kangdu<90 then
+            local add=math.modf((poisonnum-kangdu)/15);
+            JY.Person[eid]["中毒程度"]=limitX(JY.Person[eid]["中毒程度"]+add,0,99);
+        end
+    else
+        local poisonnum=level*JY.Wugong[wugong]["敌人中毒点数"]+JY.Person[pid]["攻击带毒"];
 
-    if JY.Person[eid]["抗毒能力"]< poisonnum and JY.Person[eid]["抗毒能力"]<90 then
-         AddPersonAttrib(eid,"中毒程度",math.modf(poisonnum/15));
+        if JY.Person[eid]["抗毒能力"]< poisonnum and JY.Person[eid]["抗毒能力"]<90 then
+             AddPersonAttrib(eid,"中毒程度",math.modf(poisonnum/15));
+        end
     end
 
     return hurt;
@@ -6098,6 +6223,36 @@ end
 
 
 function War_AnqiHurt(pid,emenyid,thingid)         --计算暗器伤害
+    if CONFIG.DIFFICULTY==1 then        --原版DOS逻辑 (~0x35b7d)
+        local function trunc(x) local i=math.modf(x); return i; end
+        local hp=JY.Thing[thingid]["加生命"];
+        local injury=JY.Person[emenyid]["受伤程度"];
+        local n;
+        if injury==0 then
+            n=trunc(hp/4);
+        elseif injury<=33 then
+            n=trunc(hp/3);
+        elseif injury<=66 then
+            n=trunc(hp/2);
+        else
+            n=hp;
+        end
+        n=n-Rnd(5);
+        n=trunc((n-JY.Person[pid]["暗器技巧"]*2)/3);
+        local newinj=limitX(injury-trunc(n/4),0,99);     --n为负值,受伤程度增加
+        AddPersonAttrib(emenyid,"受伤程度",newinj-injury);
+        local r=AddPersonAttrib(emenyid,"生命",n);
+        local v=JY.Thing[thingid]["加中毒解毒"];
+        if v<0 then
+            v=trunc((v-JY.Person[pid]["暗器技巧"])/2);
+        end
+        if v~=0 then
+            local oldp=JY.Person[emenyid]["中毒程度"];
+            local newp=limitX(oldp+v,0,99);
+            AddPersonAttrib(emenyid,"中毒程度",newp-oldp);
+        end
+        return r;
+    end
     local num;
     if JY.Person[emenyid]["受伤程度"]==0 then
         num=JY.Thing[thingid]["加生命"]/4-Rnd(5);
@@ -6190,6 +6345,11 @@ function War_Auto()             --自动战斗主函数
 
     if CC.AutoWarShowHead==1 then
         WAR.ShowHead=1;
+    end
+
+    if CONFIG.DIFFICULTY==1 then        --原版DOS自动战斗AI
+        War_DOS_Auto();
+        return 0;
     end
 
     local autotype=War_Think();         --思考如何战斗
@@ -6421,7 +6581,7 @@ function War_AutoSelectWugong()           --自动选择合适的武功
         if wugongid>0 then
                --选择杀生命的武功，必须消耗内力比现有内力小，起码可以发出一级的武功。
             if JY.Wugong[wugongid]["伤害类型"]==0 then
-                if JY.Wugong[wugongid]["消耗内力点数"]<=JY.Person[pid]["内力"] then
+                if War_NeiliCost(wugongid,1)<=JY.Person[pid]["内力"] then
                     local level=math.modf(JY.Person[pid]["武功等级" .. i]/100)+1;
                     --总攻击力即为概率
                     probability[i]=(JY.Person[pid]["攻击力"]*3+JY.Wugong[wugongid]["攻击力" .. level ])/2;
@@ -7024,6 +7184,858 @@ function War_AutoDoctor()            --自动医疗
     local y1=WAR.Person[WAR.CurID]["坐标Y"];
 
     War_ExecuteMenu_Sub(x1,y1,3,-1);
+end
+
+
+------------------------------------------------------------------------------------
+-------------------- 原版DOS自动战斗/敌人AI (CONFIG.DIFFICULTY==1) --------------------
+-- 依据原版 DOS 执行文件反汇编还原:
+--   0x33599 每回合决策入口  0x34550 主决策(攻击/用毒/暗器/支援)
+--   0x34c47 随机选武功攻击  0x3505b 依品德/资质选目标  0x3650e 移动
+-- 原版随机数 Rnd(n)=rand()%n, n<=1 时为 0。整数除法向零取整。
+
+function War_DOS_Rnd(n)              --原版随机数，n<=1 返回0
+    n=math.floor(n);
+    if n<=1 then
+        return 0;
+    end
+    return Rnd(n);
+end
+
+function War_DOS_Div(a,b)            --C语言整数除法
+    local v=math.modf(a/b);
+    return v;
+end
+
+--按原版阶梯判断: v < m/div 且 Rnd(10)<prob 时成立；不满足则继续判断下一阶
+function War_DOS_Ladder(v,m,rungs)
+    for _,r in ipairs(rungs) do
+        if v<War_DOS_Div(m,r[1]) and War_DOS_Rnd(10)<r[2] then
+            return true;
+        end
+    end
+    return false;
+end
+
+--从(x0,y0)广度优先计算步数，结果放在第3层(不可达为255)
+--flag=0 人和水面阻挡(原版0x36e06)，flag=1 只有建筑阻挡(原版0x36e7f)
+function War_DOS_BFS(x0,y0,flag)
+    CleanWarMap(3,255);
+    SetWarMap(x0,y0,3,0);
+    local qx,qy={x0},{y0};
+    local head,tail=1,1;
+    while head<=tail do
+        local x,y=qx[head],qy[head];
+        head=head+1;
+        local s=GetWarMap(x,y,3)+1;
+        if s<250 then
+            local nb={{x+1,y,x+1<CC.WarWidth-1},{x-1,y,x-1>0},{x,y+1,y+1<CC.WarHeight-1},{x,y-1,y-1>0}};
+            for _,n in ipairs(nb) do
+                if n[3] and GetWarMap(n[1],n[2],3)==255 and War_CanMoveXY(n[1],n[2],flag)==true then
+                    SetWarMap(n[1],n[2],3,s);
+                    tail=tail+1;
+                    qx[tail]=n[1];
+                    qy[tail]=n[2];
+                end
+            end
+        end
+    end
+end
+
+--原版距离: 只计建筑阻挡的步数
+function War_DOS_Dist(id1,id2)
+    War_DOS_BFS(WAR.Person[id1]["坐标X"],WAR.Person[id1]["坐标Y"],1);
+    return GetWarMap(WAR.Person[id2]["坐标X"],WAR.Person[id2]["坐标Y"],3);
+end
+
+function War_DOS_IsEnemyAlive(i)
+    return i~=nil and i>=0 and i<WAR.PersonNum and WAR.Person[i]["死亡"]==false
+           and WAR.Person[i]["我方"]~=WAR.Person[WAR.CurID]["我方"];
+end
+
+function War_DOS_IsAllyAlive(i)        --同方存活的其他人
+    return i~=WAR.CurID and WAR.Person[i]["死亡"]==false
+           and WAR.Person[i]["我方"]==WAR.Person[WAR.CurID]["我方"];
+end
+
+--向点(px,py)移动 (原版0x3650e)
+--mode 2: 线/十字武功，走到与目标同行同列、距离不超过range的位置
+--mode 3: 用毒，走到与目标距离不超过range(尽量远)的位置
+--其他: 走向目标相邻的格子
+function War_DOS_Approach(px,py,mode,range)
+    local me=WAR.CurID;
+    local sx=WAR.Person[me]["坐标X"];
+    local sy=WAR.Person[me]["坐标Y"];
+    local moves=WAR.Person[me]["移动步数"];
+    local dx,dy;
+
+    War_DOS_BFS(px,py,1);
+    local reach=(GetWarMap(sx,sy,3)-moves<=range);
+
+    if mode==3 or (mode==2 and reach) then
+        War_DOS_BFS(px,py,0);
+        for k=range,1,-1 do
+            local best=1000;
+            for x=0,CC.WarWidth-1 do
+                for y=0,CC.WarHeight-1 do
+                    if GetWarMap(x,y,3)==k and (mode==3 or x==px or y==py) then
+                        local m=math.abs(x-sx)+math.abs(y-sy);
+                        if m<best then
+                            best=m;
+                            dx=x;
+                            dy=y;
+                        end
+                    end
+                end
+            end
+            if dx~=nil then
+                break;
+            end
+        end
+    else
+        War_DOS_BFS(sx,sy,0);
+        local DX={0,1,-1,0};       --原版方向表 0x556de/0x556e6
+        local DY={-1,0,0,1};
+        local qx,qy=px,py;
+        while true do
+            for pass=1,2 do
+                for d=1,4 do
+                    local nx=qx+DX[d];
+                    local ny=qy+DY[d];
+                    if nx>=0 and nx<CC.WarWidth and ny>=0 and ny<CC.WarHeight and GetWarMap(nx,ny,3)<128 then
+                        if pass==2 or nx==sx or ny==sy then
+                            dx=nx;
+                            dy=ny;
+                            break;
+                        end
+                    end
+                end
+                if dx~=nil then
+                    break;
+                end
+            end
+            if dx~=nil then
+                break;
+            end
+            if qx>sx and qx>0 then          --目标附近都走不到，向自己靠近一格再试
+                qx=qx-1;
+            elseif qx<sx and qx<CC.WarWidth-1 then
+                qx=qx+1;
+            elseif qy>sy and qy>0 then
+                qy=qy-1;
+            elseif qy<sy and qy<CC.WarHeight-1 then
+                qy=qy+1;
+            end
+            if qx==sx and qy==sy then
+                break;
+            end
+        end
+    end
+
+    if dx==nil or (dx==sx and dy==sy) or moves<=0 then
+        return;
+    end
+
+    War_DOS_BFS(sx,sy,0);
+    if GetWarMap(dx,dy,3)>=128 then
+        return;
+    end
+    local x,y=dx,dy;
+    while true do                 --沿路径倒退到本回合能走到的位置
+        local i=GetWarMap(x,y,3);
+        if i<=moves then
+            break;
+        end
+        if GetWarMap(x-1,y,3)==i-1 then
+            x=x-1;
+        elseif GetWarMap(x+1,y,3)==i-1 then
+            x=x+1;
+        elseif GetWarMap(x,y-1,3)==i-1 then
+            y=y-1;
+        elseif GetWarMap(x,y+1,3)==i-1 then
+            y=y+1;
+        else
+            return;
+        end
+    end
+    if x~=sx or y~=sy then
+        War_MovePerson(x,y);
+    end
+end
+
+--逃跑 (原版0x34aec)：走到恰好用完移动步数、离所有敌人距离之和最大的位置
+--flag=0 之后休息
+function War_DOS_Escape(flag)
+    local me=WAR.CurID;
+    local moves=WAR.Person[me]["移动步数"];
+    War_DOS_BFS(WAR.Person[me]["坐标X"],WAR.Person[me]["坐标Y"],0);
+    local maxsum=0;
+    local ex,ey;
+    for x=0,CC.WarWidth-1 do
+        for y=0,CC.WarHeight-1 do
+            if GetWarMap(x,y,3)==moves then
+                local sum=0;
+                for k=0,WAR.PersonNum-1 do          --原版不排除已死亡的人
+                    if WAR.Person[k]["我方"]~=WAR.Person[me]["我方"] then
+                        sum=sum+math.abs(x-WAR.Person[k]["坐标X"])+math.abs(y-WAR.Person[k]["坐标Y"]);
+                    end
+                end
+                if sum>maxsum then
+                    maxsum=sum;
+                    ex=x;
+                    ey=y;
+                end
+            end
+        end
+    end
+    if maxsum>0 then
+        War_DOS_Approach(ex,ey,0,0);
+    end
+    if flag==0 then
+        War_RestMenu();
+    end
+end
+
+--选择最近的敌人 (原版0x35372)
+function War_DOS_TargetNearest(ctx)
+    local me=WAR.CurID;
+    War_DOS_BFS(WAR.Person[me]["坐标X"],WAR.Person[me]["坐标Y"],1);
+    local mind=1000;
+    for i=0,WAR.PersonNum-1 do
+        if War_DOS_IsEnemyAlive(i) then
+            local d=GetWarMap(WAR.Person[i]["坐标X"],WAR.Person[i]["坐标Y"],3);
+            if d<mind then
+                mind=d;
+                ctx.target=i;
+            end
+        end
+    end
+end
+
+--按敌人某属性选目标。maxflag=true 取最大(需>start)，否则取最小(需<start)
+--返回最后选中时的属性值
+function War_DOS_TargetByAttrib(ctx,attrib,maxflag,start)
+    local best=start;
+    local r=nil;
+    for i=0,WAR.PersonNum-1 do
+        if War_DOS_IsEnemyAlive(i) then
+            local v=JY.Person[WAR.Person[i]["人物编号"]][attrib];
+            if (maxflag and v>best) or ((not maxflag) and v<best) then
+                best=v;
+                ctx.target=i;
+                r=v;
+            end
+        end
+    end
+    return best,r;
+end
+
+--选择攻击目标 (原版0x3505b)
+function War_DOS_SelectTarget(ctx)
+    local me=WAR.CurID;
+    local p=JY.Person[WAR.Person[me]["人物编号"]];
+    if p["品德"]>=75 and War_DOS_Rnd(10)<7 then           --正派：打攻击力最高的
+        War_DOS_TargetByAttrib(ctx,"攻击力",true,0);
+    elseif p["品德"]<=25 and War_DOS_Rnd(10)<7 then       --邪派：打攻击力最低的
+        War_DOS_TargetByAttrib(ctx,"攻击力",false,1000);
+    elseif p["资质"]>=70 and War_DOS_Rnd(10)<7 then       --聪明：先打敌方解毒/医疗者 (原版0x35217)
+        local poisoner=false;
+        for i=0,WAR.PersonNum-1 do                          --我方(含自己)有用毒>20的人
+            if WAR.Person[i]["我方"]==WAR.Person[me]["我方"] and JY.Person[WAR.Person[i]["人物编号"]]["用毒能力"]>20 then
+                poisoner=true;
+            end
+        end
+        local best=0;
+        local found1,found2=false,false;
+        if poisoner then
+            for i=0,WAR.PersonNum-1 do
+                if War_DOS_IsEnemyAlive(i) then
+                    local v=JY.Person[WAR.Person[i]["人物编号"]]["解毒能力"];
+                    if v>best then
+                        best=v;
+                        ctx.target=i;
+                        if v>=20 then found1=true; end
+                    end
+                end
+            end
+        end
+        if not found1 then
+            for i=0,WAR.PersonNum-1 do
+                if War_DOS_IsEnemyAlive(i) then
+                    local v=JY.Person[WAR.Person[i]["人物编号"]]["医疗能力"];
+                    if v>best then
+                        best=v;
+                        ctx.target=i;
+                        if v>=20 then found2=true; end
+                    end
+                end
+            end
+        end
+        if not found2 then        --原版如此：未找到医疗者(包括找到解毒者时)都改打攻击力最低的
+            War_DOS_TargetByAttrib(ctx,"攻击力",false,1000);
+        end
+    else
+        War_DOS_TargetNearest(ctx);
+    end
+    if not War_DOS_IsEnemyAlive(ctx.target) then
+        War_DOS_TargetNearest(ctx);
+    end
+end
+
+--武功能否打到目标 (原版0x34c47中的判断)
+--返回 能否攻击, 移动方式
+function War_DOS_CanHit(t,atype,range)
+    local me=WAR.CurID;
+    if not War_DOS_IsEnemyAlive(t) then
+        return false,0;
+    end
+    local d=War_DOS_Dist(me,t);
+    if atype==0 or atype==3 then
+        return d<=range,1;
+    elseif atype==1 or atype==2 then
+        local ok=d<=range and (WAR.Person[t]["坐标X"]==WAR.Person[me]["坐标X"] or WAR.Person[t]["坐标Y"]==WAR.Person[me]["坐标Y"]);
+        return ok,2;
+    end
+    return false,0;
+end
+
+--随机选一种武功攻击 (原版0x34c47)
+function War_DOS_Attack(ctx)
+    local me=WAR.CurID;
+    local pid=WAR.Person[me]["人物编号"];
+    local num=0;
+    for i=1,10 do
+        if JY.Person[pid]["武功" .. i]>0 then
+            num=num+1;
+        end
+    end
+    local slot=War_DOS_Rnd(num)+1;           --原版：在已会武功中等概率随机选择
+    local wugong=JY.Person[pid]["武功" .. slot];
+    if wugong<=0 then
+        War_RestMenu();
+        return;
+    end
+    local level=math.modf(JY.Person[pid]["武功等级" .. slot]/100)+1;
+    local atype=JY.Wugong[wugong]["攻击范围"];
+    local range=JY.Wugong[wugong]["移动范围" .. level];
+
+    War_DOS_SelectTarget(ctx);
+
+    local function hit()
+        local t=ctx.target;
+        local x,y=WAR.Person[t]["坐标X"],WAR.Person[t]["坐标Y"];
+        if atype==2 then
+            x,y=WAR.Person[me]["坐标X"],WAR.Person[me]["坐标Y"];
+        end
+        WAR.Person[me]["自动选择对手"]=t;
+        War_Fight_Sub(me,slot,x,y);
+    end
+
+    local ok,mode=War_DOS_CanHit(ctx.target,atype,range);
+    if ok then
+        hit();
+        return;
+    end
+    if WAR.Person[me]["移动步数"]<=0 then       --原版：打不到又不能移动则什么也不做
+        return;
+    end
+    if War_DOS_IsEnemyAlive(ctx.target) then
+        War_DOS_Approach(WAR.Person[ctx.target]["坐标X"],WAR.Person[ctx.target]["坐标Y"],mode,range);
+    end
+    if War_DOS_CanHit(ctx.target,atype,range) then
+        hit();
+        return;
+    end
+    War_DOS_TargetNearest(ctx);                 --改选最近的敌人
+    if War_DOS_CanHit(ctx.target,atype,range) then
+        hit();
+        return;
+    end
+    War_RestMenu();
+end
+
+--对目标执行医疗/解毒/用毒 (原版0x36210/0x363ac/0x3540e)
+--flag: 1 用毒 2 解毒 3 医疗；movemode: 移动方式
+function War_DOS_Execute(ctx,flag,movemode,movefirst)
+    local me=WAR.CurID;
+    local pid=WAR.Person[me]["人物编号"];
+    local p=JY.Person[pid];
+    local t=ctx.target;
+    local range;
+    if flag==1 then
+        range=War_DOS_Div(p["用毒能力"],15)+1;
+    elseif flag==2 then
+        range=War_DOS_Div(p["解毒能力"],15)+1;
+    else
+        range=War_DOS_Div(p["医疗能力"],15)+1;
+    end
+
+    local function doit()
+        War_ExecuteMenu_Sub(WAR.Person[t]["坐标X"],WAR.Person[t]["坐标Y"],flag,-1);
+    end
+
+    local d=War_DOS_Dist(me,t);
+    if d<=range and not (movefirst and WAR.Person[me]["移动步数"]~=0) then
+        doit();
+        return;
+    end
+    if WAR.Person[me]["移动步数"]>0 then
+        War_DOS_Approach(WAR.Person[t]["坐标X"],WAR.Person[t]["坐标Y"],movemode,range);
+    end
+    if War_DOS_Dist(me,t)<=range then
+        doit();
+        return;
+    end
+    --够不着：攻击力高于本方平均(攻击力+生命)则改为攻击，否则休息
+    if p["攻击力"]*2>War_DOS_Div(ctx.ownSum*2,math.max(ctx.ownNum,1)) then
+        War_DOS_Attack(ctx);
+    else
+        War_RestMenu();
+    end
+end
+
+--用毒 (原版0x3540e)
+function War_DOS_Poison(ctx)
+    local me=WAR.CurID;
+    local p=JY.Person[WAR.Person[me]["人物编号"]];
+    local function canpoison(i)
+        if not War_DOS_IsEnemyAlive(i) then
+            return false;
+        end
+        local q=JY.Person[WAR.Person[i]["人物编号"]];
+        return q["中毒程度"]<95 and q["抗毒能力"]<p["用毒能力"];
+    end
+    local t=-1;
+    if p["资质"]>60 and War_DOS_Rnd(10)<7 then          --攻击力最高的可中毒敌人
+        local best=0;
+        for i=0,WAR.PersonNum-1 do
+            if canpoison(i) then
+                local v=JY.Person[WAR.Person[i]["人物编号"]]["攻击力"];
+                if v>best then
+                    best=v;
+                    t=i;
+                end
+            end
+        end
+    end
+    if t<0 then
+        --原版0x3570f本意是选最近的，但其距离总是读旧目标的位置，实际选到的是第一个可中毒的敌人
+        for i=0,WAR.PersonNum-1 do
+            if canpoison(i) then
+                t=i;
+                break;
+            end
+        end
+    end
+    if t<0 then
+        War_DOS_Attack(ctx);
+        return;
+    end
+    ctx.target=t;
+    War_DOS_Execute(ctx,1,3,true);
+end
+
+--投掷暗器 (原版0x3598c 模式1)
+function War_DOS_ThrowAnqi(x1,y1,thingid)
+    local me=WAR.CurID;
+    if WAR.Person[me]["我方"]==true then
+        War_ExecuteMenu_Sub(x1,y1,4,thingid);
+        return;
+    end
+    local pid=WAR.Person[me]["人物编号"];      --敌人使用自己携带的暗器
+    local x0=WAR.Person[me]["坐标X"];
+    local y0=WAR.Person[me]["坐标Y"];
+    CleanWarMap(4,0);
+    WAR.Person[me]["人方向"]=War_Direct(x0,y0,x1,y1);
+    SetWarMap(x1,y1,4,1);
+    local emeny=GetWarMap(x1,y1,2);
+    if emeny>=0 and WAR.Person[me]["我方"]~=WAR.Person[emeny]["我方"] then
+        WAR.Person[emeny]["点数"]=War_AnqiHurt(pid,WAR.Person[emeny]["人物编号"],thingid);
+        SetWarMap(x1,y1,4,2);
+        WAR.Effect=2;
+    end
+    WAR.EffectXY={};
+    WAR.EffectXY[1]={x1,y1};
+    WAR.EffectXY[2]={x1,y1};
+    if emeny>=0 then
+        War_ShowFight(pid,0,-1,0,x1,y1,JY.Thing[thingid]["暗器动画编号"]);
+    end
+    for i=0,WAR.PersonNum-1 do
+        WAR.Person[i]["点数"]=0;
+    end
+    instruct_41(pid,thingid,-1);
+end
+
+--暗器 (原版0x3582b)
+function War_DOS_Anqi(ctx)
+    local me=WAR.CurID;
+    local p=JY.Person[WAR.Person[me]["人物编号"]];
+    War_DOS_SelectTarget(ctx);
+    local t=ctx.target;
+    if not War_DOS_IsEnemyAlive(t) then
+        War_RestMenu();
+        return;
+    end
+    local range=War_DOS_Div(p["暗器技巧"],15)+1;
+    if War_DOS_Dist(me,t)>range then
+        if WAR.Person[me]["移动步数"]>0 then
+            War_DOS_Approach(WAR.Person[t]["坐标X"],WAR.Person[t]["坐标Y"],1,range);
+        end
+        if War_DOS_Dist(me,t)>range then
+            War_DOS_Attack(ctx);
+            return;
+        end
+    end
+    War_DOS_ThrowAnqi(WAR.Person[t]["坐标X"],WAR.Person[t]["坐标Y"],ctx.item);
+end
+
+--吃药 (原版0x35803)：先逃开(不休息)，再对自己使用物品
+function War_DOS_UseItem(ctx)
+    local me=WAR.CurID;
+    local pid=WAR.Person[me]["人物编号"];
+    War_DOS_Escape(1);
+    local thingid=ctx.item;
+    if thingid==nil or thingid<0 then
+        return;
+    end
+    UseThingEffect(thingid,pid);
+    if WAR.Person[me]["我方"]==true then          --原版不论效果如何都减少物品
+        instruct_32(thingid,-1);
+    else
+        instruct_41(pid,thingid,-1);
+    end
+    lib.Delay(340);
+end
+
+--找物品: 我方用公共物品，敌人用携带物品。cond(thingid)为真则返回该物品id
+function War_DOS_FindThing(cond)
+    local me=WAR.CurID;
+    if WAR.Person[me]["我方"]==true then
+        for i=1,CC.MyThingNum do
+            local id=JY.Base["物品" .. i];
+            if id>=0 and cond(id,true) then
+                return id;
+            end
+        end
+    else
+        local pid=WAR.Person[me]["人物编号"];
+        for i=1,4 do
+            local id=JY.Person[pid]["携带物品" .. i];
+            if id>=0 and cond(id,false) then
+                return id;
+            end
+        end
+    end
+    return nil;
+end
+
+--生命低时 (原版0x33c4d)：自己医疗 / 吃加生命药 / 走向会医疗的队友
+function War_DOS_ThinkLife(ctx)
+    local me=WAR.CurID;
+    local p=JY.Person[WAR.Person[me]["人物编号"]];
+    if p["医疗能力"]>=20 and p["体力"]>=50 and p["医疗能力"]>p["受伤程度"]-30 then
+        ctx.target=me;
+        WAR.Person[me]["DOS行动"]=5;
+        return 5;
+    end
+    local id=War_DOS_FindThing(function(t) return JY.Thing[t]["加生命"]>0 end);
+    if id~=nil then
+        ctx.item=id;
+        ctx.target=me;
+        WAR.Person[me]["DOS行动"]=6;
+        return 6;
+    end
+    for i=0,WAR.PersonNum-1 do
+        if War_DOS_IsAllyAlive(i) then
+            local q=JY.Person[WAR.Person[i]["人物编号"]];
+            if q["医疗能力"]>20 and q["医疗能力"]>p["受伤程度"]-30 then
+                ctx.target=i;
+                WAR.Person[me]["DOS行动"]=8;
+                return 8;
+            end
+        end
+    end
+    return 0;
+end
+
+--中毒时 (原版0x33e93)：自己解毒 / 吃解毒药 / 走向会解毒的队友
+function War_DOS_ThinkPoison(ctx)
+    local me=WAR.CurID;
+    local p=JY.Person[WAR.Person[me]["人物编号"]];
+    if p["解毒能力"]>20 and p["解毒能力"]>p["中毒程度"]-30 and p["体力"]>50 then
+        ctx.target=me;
+        WAR.Person[me]["DOS行动"]=4;
+        return 4;
+    end
+    --原版我方检查的是物品偏移+0x70(加用毒能力<0)而不是加中毒解毒，因此我方自动战斗实际不会吃解毒药
+    local id=War_DOS_FindThing(function(t,our)
+        if our then
+            return JY.Thing[t]["加用毒能力"]<0;
+        end
+        return JY.Thing[t]["加中毒解毒"]<0;
+    end);
+    if id~=nil then
+        ctx.item=id;
+        ctx.target=me;
+        WAR.Person[me]["DOS行动"]=6;
+        return 6;
+    end
+    for i=0,WAR.PersonNum-1 do
+        if War_DOS_IsAllyAlive(i) then
+            local q=JY.Person[WAR.Person[i]["人物编号"]];
+            if q["解毒能力"]>20 and q["解毒能力"]>p["中毒程度"]-30 then
+                ctx.target=i;
+                WAR.Person[me]["DOS行动"]=9;
+                return 9;
+            end
+        end
+    end
+    return 0;
+end
+
+--内力低时 (原版0x340d9)：吃加内力药
+function War_DOS_ThinkNeili(ctx)
+    local me=WAR.CurID;
+    local id=War_DOS_FindThing(function(t) return JY.Thing[t]["加内力"]>0 end);
+    if id~=nil then
+        ctx.item=id;
+        ctx.target=me;
+        WAR.Person[me]["DOS行动"]=6;
+        return 6;
+    end
+    return 0;
+end
+
+--给队友医疗 (原版0x341f6)
+function War_DOS_ThinkDoctorAlly(ctx)
+    local me=WAR.CurID;
+    local p=JY.Person[WAR.Person[me]["人物编号"]];
+    for i=0,WAR.PersonNum-1 do
+        if War_DOS_IsAllyAlive(i) then
+            local q=JY.Person[WAR.Person[i]["人物编号"]];
+            if p["医疗能力"]>q["受伤程度"]-30 then
+                local need=WAR.Person[i]["DOS行动"]==8
+                        or q["生命"]<20 or q["受伤程度"]>40
+                        or War_DOS_Ladder(q["生命"],q["生命最大值"],{{2,7},{3,8},{4,9}})
+                        or q["生命"]<War_DOS_Div(q["生命最大值"],5);
+                if need then
+                    ctx.target=i;
+                    WAR.Person[me]["DOS行动"]=5;
+                    return 5;
+                end
+            end
+        end
+    end
+    return 0;
+end
+
+--给队友解毒 (原版0x343da)
+function War_DOS_ThinkDecPoisonAlly(ctx)
+    local me=WAR.CurID;
+    local p=JY.Person[WAR.Person[me]["人物编号"]];
+    for i=0,WAR.PersonNum-1 do
+        if War_DOS_IsAllyAlive(i) then
+            local q=JY.Person[WAR.Person[i]["人物编号"]];
+            if p["解毒能力"]>q["中毒程度"]-30 then
+                local v=q["中毒程度"];
+                local need=WAR.Person[i]["DOS行动"]==9
+                        or (v>10 and War_DOS_Rnd(10)<4)
+                        or (v>20 and War_DOS_Rnd(10)<6)
+                        or (v>30 and War_DOS_Rnd(10)<8)
+                        or v>40;
+                if need then
+                    ctx.target=i;
+                    WAR.Person[me]["DOS行动"]=4;
+                    return 4;
+                end
+            end
+        end
+    end
+    return 0;
+end
+
+--主决策 (原版0x34550)：支援/用毒/暗器/攻击/休息
+function War_DOS_ThinkMain(ctx)
+    local me=WAR.CurID;
+    local pid=WAR.Person[me]["人物编号"];
+    local p=JY.Person[pid];
+
+    --自己远弱于敌人平均而本方整体占优时，做支援(医疗/解毒受伤最重的队友)
+    local mine=p["生命"]+p["攻击力"];
+    if ctx.eneNum>0 and War_DOS_Div(War_DOS_Div(ctx.eneSum,ctx.eneNum),2)>mine and ctx.ownSum>ctx.eneSum*2 then
+        local best=0;
+        local bt,kind;
+        if p["医疗能力"]>=20 and p["体力"]>=50 then
+            for i=0,WAR.PersonNum-1 do
+                if War_DOS_IsAllyAlive(i) then
+                    local q=JY.Person[WAR.Person[i]["人物编号"]];
+                    local v=q["生命最大值"]-q["生命"];
+                    if q["生命"]<q["生命最大值"] and v>best then
+                        best=v;
+                        bt=i;
+                        kind=5;
+                    end
+                end
+            end
+        elseif p["解毒能力"]>=20 and p["体力"]>=50 then
+            for i=0,WAR.PersonNum-1 do
+                if War_DOS_IsAllyAlive(i) then
+                    local v=JY.Person[WAR.Person[i]["人物编号"]]["中毒程度"];
+                    if v>0 and v>best then
+                        best=v;
+                        bt=i;
+                        kind=4;
+                    end
+                end
+            end
+        end
+        if best~=0 then
+            ctx.target=bt;
+            WAR.Person[me]["DOS行动"]=kind;
+            return kind;
+        end
+    end
+
+    --用毒
+    if p["用毒能力"]-p["攻击力"]>War_DOS_Rnd(50) and War_DOS_Rnd(150)<p["用毒能力"] then
+        WAR.Person[me]["DOS行动"]=3;
+        return 3;
+    end
+
+    --暗器
+    local our=WAR.Person[me]["我方"]==true;
+    local id=War_DOS_FindThing(function(t)
+        local hp=JY.Thing[t]["加生命"];
+        local poison=JY.Thing[t]["加中毒解毒"];
+        if our then
+            local lim=War_DOS_Div(p["攻击力"]*3,2);
+            if hp<0 and math.abs(hp)>lim and War_DOS_Rnd(p["暗器技巧"])>20 then
+                return true;
+            end
+            return poison>0 and math.abs(poison)>lim and War_DOS_Rnd(10)<3;
+        else
+            if hp<0 and math.abs(hp)>p["攻击力"] and War_DOS_Rnd(10)<6 then
+                return true;
+            end
+            return poison>0 and math.abs(poison)>p["攻击力"] and War_DOS_Rnd(10)<3;
+        end
+    end);
+    if id~=nil then
+        ctx.item=id;
+        WAR.Person[me]["DOS行动"]=10;
+        return 10;
+    end
+
+    --攻击
+    if p["体力"]>10 then
+        local minv=1000;
+        local has=false;
+        for i=1,10 do
+            local w=p["武功" .. i];
+            if w~=0 then
+                has=true;
+                if JY.Wugong[w]["消耗内力点数"]<minv then
+                    minv=JY.Wugong[w]["消耗内力点数"];
+                end
+            end
+        end
+        if has and p["内力"]>=minv then
+            return 2;
+        end
+    end
+    return 0;
+end
+
+--原版自动战斗入口 (原版0x33599)
+function War_DOS_Auto()
+    local me=WAR.CurID;
+    local pid=WAR.Person[me]["人物编号"];
+    local p=JY.Person[pid];
+
+    local ctx={ownSum=0,ownNum=0,eneSum=0,eneNum=0,target=-1,item=-1};
+    for i=0,WAR.PersonNum-1 do            --双方(攻击力+生命)总和，原版包括已死亡的人
+        local q=JY.Person[WAR.Person[i]["人物编号"]];
+        if WAR.Person[i]["我方"]==WAR.Person[me]["我方"] then
+            ctx.ownSum=ctx.ownSum+q["攻击力"]+q["生命"];
+            ctx.ownNum=ctx.ownNum+1;
+        else
+            ctx.eneSum=ctx.eneSum+q["攻击力"]+q["生命"];
+            ctx.eneNum=ctx.eneNum+1;
+        end
+    end
+
+    local act=0;
+    if p["体力"]<10 then
+        act=7;                         --休息
+    end
+
+    --生命低 (原版此处结果会覆盖体力不足的休息)
+    if p["生命"]<20 or p["受伤程度"]>50
+       or War_DOS_Ladder(p["生命"],p["生命最大值"],{{2,3},{3,5},{4,7},{5,9}}) then
+        act=War_DOS_ThinkLife(ctx);
+    end
+
+    if act==0 and War_DOS_Rnd(10)<War_DOS_Div(p["中毒程度"],10) then       --中毒
+        act=War_DOS_ThinkPoison(ctx);
+    end
+
+    if act==0 and War_DOS_Ladder(p["内力"],p["内力最大值"],{{2,2},{3,4},{4,6},{5,8}}) then   --内力低
+        act=War_DOS_ThinkNeili(ctx);
+    end
+
+    if act==0 and p["体力"]>50 then             --给队友医疗
+        local v=p["医疗能力"];
+        if (v>=20 and War_DOS_Rnd(10)<4) or (v>=40 and War_DOS_Rnd(10)<6)
+           or (v>=60 and War_DOS_Rnd(10)<8) or v>=80 then
+            act=War_DOS_ThinkDoctorAlly(ctx);
+        end
+    end
+
+    if act==0 and p["体力"]>50 then             --给队友解毒
+        local v=p["解毒能力"];
+        if (v>=20 and War_DOS_Rnd(10)<4) or (v>=40 and War_DOS_Rnd(10)<6)
+           or (v>=60 and War_DOS_Rnd(10)<8) or v>=80 then
+            act=War_DOS_ThinkDecPoisonAlly(ctx);
+        end
+    end
+
+    if act==0 and War_DOS_Rnd(10)<5 then        --生命很低时逃跑
+        if p["生命"]<20 then
+            act=11;
+        elseif p["生命"]<War_DOS_Div(p["生命最大值"],4) and War_DOS_Rnd(10)<6 then
+            act=11;
+        elseif p["生命"]<War_DOS_Div(p["生命最大值"],5) and War_DOS_Rnd(10)<8 then
+            act=11;
+        end
+    end
+
+    if act==0 then
+        act=War_DOS_ThinkMain(ctx);
+    end
+
+    if act==2 then
+        War_DOS_Attack(ctx);
+    elseif act==3 then
+        War_DOS_Poison(ctx);
+    elseif act==4 then
+        War_DOS_Execute(ctx,2,1,false);
+    elseif act==5 then
+        War_DOS_Execute(ctx,3,1,false);
+    elseif act==6 then
+        War_DOS_UseItem(ctx);
+    elseif act==8 or act==9 then              --走向能帮自己的队友，然后攻击
+        local t=ctx.target;
+        if WAR.Person[me]["移动步数"]>0 and t>=0 then
+            War_DOS_Approach(WAR.Person[t]["坐标X"],WAR.Person[t]["坐标Y"],0,0);
+        end
+        War_DOS_Attack(ctx);
+    elseif act==10 then
+        War_DOS_Anqi(ctx);
+    elseif act==11 then
+        War_DOS_Escape(0);
+    else                                       --0,7 休息
+        War_RestMenu();
+    end
 end
 
 
